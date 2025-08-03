@@ -1,0 +1,1 @@
+Cài cho quán khác thì sẽ thay đổi nội dung trong 2 tệp config.js và login.js

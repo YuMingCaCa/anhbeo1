@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Công Cụ Tạo Mã QR Hàng Loạt</title>
+    <!-- Icon cho tab trình duyệt -->
+    <link rel="icon" type="image/x-icon" href="../favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Be Vietnam Pro', sans-serif; }
+        @media print {
+            body, .container {
+                margin: 0;
+                padding: 0;
+            }
+            .no-print {
+                display: none;
+            }
+            #qrcode-container {
+                display: grid;
+                gap: 1cm; /* Khoảng cách giữa các mã QR */
+                padding: 1cm;
+                box-sizing: border-box;
+            }
+            .qr-item {
+                page-break-inside: avoid;
+                border: 1px dashed #ccc;
+                padding: 10px;
+                text-align: center;
+            }
+            /* Thiết lập cột cho các layout khác nhau */
+            #qrcode-container.print-cols-1 { grid-template-columns: repeat(1, 1fr); }
+            #qrcode-container.print-cols-2 { grid-template-columns: repeat(2, 1fr); }
+            #qrcode-container.print-cols-4 { grid-template-columns: repeat(2, 1fr); } /* 2x2 */
+            #qrcode-container.print-cols-6 { grid-template-columns: repeat(2, 1fr); } /* 2x3 */
+            #qrcode-container.print-cols-8 { grid-template-columns: repeat(2, 1fr); } /* 2x4 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="container mx-auto p-8">
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8 no-print">
+            <h1 class="text-3xl font-bold text-center mb-2">Công cụ tạo mã QR hàng loạt</h1>
+            <p class="text-center text-gray-600 mb-6">Tạo mã QR tĩnh (không bao giờ hết hạn) cho tất cả các bàn.</p>
+            
+            <div class="grid md:grid-cols-3 gap-4">
+                <div>
+                    <label for="base-url" class="block text-sm font-medium text-gray-700">Đường dẫn trang gọi món (URL)</label>
+                    <input type="text" id="base-url" value="/index.html" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div>
+                    <label for="table-count" class="block text-sm font-medium text-gray-700">Tổng số bàn cần tạo</label>
+                    <input type="number" id="table-count" value="20" min="1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                 <div>
+                    <label for="qrs-per-page" class="block text-sm font-medium text-gray-700">Số mã QR / trang in</label>
+                    <select id="qrs-per-page" class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="4" selected>4</option>
+                        <option value="6">6</option>
+                        <option value="8">8</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-4 mt-6">
+                <button id="generate-btn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                    Tạo Mã QR
+                </button>
+                 <button id="print-btn" class="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hidden">
+                    In trang này
+                </button>
+            </div>
+        </div>
+
+        <div id="qrcode-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <!-- Mã QR sẽ được tạo ở đây -->
+        </div>
+    </div>
+
+    <script type="module">
+        import { restaurantId } from '../../js/config.js';
+
+        const generateBtn = document.getElementById('generate-btn');
+        const printBtn = document.getElementById('print-btn');
+        const qrCodeContainer = document.getElementById('qrcode-container');
+        const baseUrlInput = document.getElementById('base-url');
+        const tableCountInput = document.getElementById('table-count');
+        const qrsPerPageSelect = document.getElementById('qrs-per-page');
+
+        generateBtn.addEventListener('click', () => {
+            qrCodeContainer.innerHTML = ''; // Xóa các mã cũ
+            const baseUrl = baseUrlInput.value;
+            const tableCount = parseInt(tableCountInput.value, 10);
+            const qrsPerPage = qrsPerPageSelect.value;
+
+            if (!baseUrl || isNaN(tableCount) || tableCount <= 0) {
+                alert('Vui lòng nhập đúng đường dẫn và số bàn hợp lệ.');
+                return;
+            }
+
+            // Gán class cho việc in ấn
+            qrCodeContainer.className = qrCodeContainer.className.replace(/print-cols-\d+/g, ''); // Xóa class cũ
+            qrCodeContainer.classList.add(`print-cols-${qrsPerPage}`);
+
+            for (let i = 1; i <= tableCount; i++) {
+                const fullUrl = `${baseUrl}?table=${i}&id=${restaurantId}`;
+                
+                const qrItem = document.createElement('div');
+                qrItem.className = 'qr-item bg-white p-4 rounded-lg shadow-md flex flex-col items-center text-center';
+
+                const qrCodeEl = document.createElement('div');
+                qrCodeEl.id = `qrcode-${i}`;
+                
+                const label = document.createElement('p');
+                label.className = 'mt-3 font-bold text-lg';
+                label.textContent = `Bàn ${i}`;
+
+                qrItem.appendChild(qrCodeEl);
+                qrItem.appendChild(label);
+                qrCodeContainer.appendChild(qrItem);
+
+                new QRCode(qrCodeEl, {
+                    text: fullUrl,
+                    width: 128,
+                    height: 128,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            }
+            
+            if(tableCount > 0) {
+                printBtn.classList.remove('hidden');
+            } else {
+                printBtn.classList.add('hidden');
+            }
+        });
+        
+        printBtn.addEventListener('click', () => {
+            window.print();
+        });
+    </script>
+    <footer class="mt-8 text-center text-sm text-gray-500">
+        <div class="max-w-7xl mx-auto py-4 border-t border-gray-200">
+            <p>&copy; Chi tiết triển khai hệ thống gọi món trực tuyến liên hệ Mr Minh SĐT: 0936.666.664</p>
+        </div>
+    </footer>
+</body>
+</html>

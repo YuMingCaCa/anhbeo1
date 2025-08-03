@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="/goiMonQR/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Be Vietnam Pro', sans-serif; }
+        .tab-btn { display: inline-block; padding: 0.75rem 1.5rem; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 500; transition: all 0.2s ease-in-out; }
+        .tab-btn:hover { color: #1d4ed8; border-bottom-color: #93c5fd; }
+        .tab-btn.active { color: #1d4ed8; border-bottom-color: #2563eb; font-weight: 700; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .order-card-new { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .order-card-removing { transition: opacity 0.4s ease-out, transform 0.4s ease-out; opacity: 0; transform: scale(0.9); }
+        #quannhau-iframe { width: 100%; height: 80vh; border: none; }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div id="sound-modal" class="fixed inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center z-50 p-4">
+        <div class="text-white text-6xl mb-4"><i class="fas fa-volume-up"></i></div>
+        <h2 class="text-white text-2xl font-bold mb-4">Kích hoạt âm thanh thông báo</h2>
+        <p class="text-gray-300 text-center mb-6 max-w-sm">Do quy định của trình duyệt, bạn cần nhấn nút này mỗi khi tải trang để nhận thông báo bằng âm thanh và giọng nói.</p>
+        <button id="enable-sound-btn" class="bg-blue-500 text-white px-8 py-3 rounded-lg font-bold text-lg hover:bg-blue-600 transition-colors">Bắt đầu làm việc</button>
+    </div>
+
+    <div id="main-container" class="hidden">
+        <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+            <header class="text-center mb-8 relative">
+                <h1 id="dashboard-title" class="text-4xl font-bold text-gray-800">Bảng Điều Khiển</h1>
+                <p class="text-gray-600 mt-2">Quản lý tổng hợp cho chủ quán</p>
+                <a href="/goiMonQR/generate-qr" target="_blank" class="absolute top-0 right-0 bg-teal-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-teal-600 transition-colors flex items-center gap-2 shadow-md no-print">
+                    <i class="fas fa-qrcode"></i><span>Tạo mã QR</span>
+                </a>
+                <button id="logout-btn" class="absolute top-0 left-0 bg-red-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-600 transition-colors flex items-center gap-2 shadow-md">
+                    <i class="fas fa-sign-out-alt"></i><span>Đăng xuất</span>
+                </button>
+            </header>
+
+            <div class="border-b border-gray-300 mb-6">
+                <nav class="flex justify-center -mb-px">
+                    <button class="tab-btn active" data-tab="kitchen"><i class="fas fa-utensils mr-2"></i>Màn Hình Bếp</button>
+                    <button class="tab-btn" data-tab="menu"><i class="fas fa-book-open mr-2"></i>Quản Lý Thực Đơn</button>
+                    <button class="tab-btn" data-tab="reports"><i class="fas fa-chart-line mr-2"></i>Báo Cáo (Sắp có)</button>
+                    <button class="tab-btn" data-tab="quannhau"><i class="fas fa-beer mr-2"></i>Quán Nhậu</button>
+                </nav>
+            </div>
+
+            <div>
+                <div id="kitchen-tab" class="tab-content active">
+                    <main id="orders-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <p id="loading-message" class="text-center text-gray-500 col-span-full">Đang chờ đơn hàng mới...</p>
+                    </main>
+                </div>
+
+                <div id="menu-tab" class="tab-content">
+                    <div class="grid md:grid-cols-2 gap-8 mb-8">
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h2 class="text-2xl font-bold mb-4" id="product-form-title">Thêm Món Ăn Mới</h2>
+                            <form id="product-form" class="space-y-4">
+                                <input type="hidden" id="product-id">
+                                <div>
+                                    <label for="product-name" class="block text-sm font-medium text-gray-700">Tên món ăn</label>
+                                    <input type="text" id="product-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div>
+                                    <label for="product-price" class="block text-sm font-medium text-gray-700">Giá (VNĐ)</label>
+                                    <input type="number" id="product-price" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div>
+                                    <label for="product-description" class="block text-sm font-medium text-gray-700">Mô tả ngắn (tùy chọn)</label>
+                                    <textarea id="product-description" rows="3" placeholder="Ví dụ: Bò hầm mềm, tan trong miệng, ăn kèm bánh mì..." class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                                </div>
+                                <div>
+                                    <label for="product-image-url" class="block text-sm font-medium text-gray-700">URL Hình ảnh (tùy chọn)</label>
+                                    <input type="url" id="product-image-url" placeholder="https://example.com/image.jpg" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <a href="https://postimages.org/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 mt-2 text-sm font-medium text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-external-link-alt fa-fw mr-1"></i>Công cụ tạo URL
+                                    </a>
+                                </div>
+                                <div>
+                                    <label for="product-category-select" class="block text-sm font-medium text-gray-700">Phân loại</label>
+                                    <select id="product-category-select" required class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="">-- Chọn loại món ăn --</option>
+                                    </select>
+                                </div>
+                                <div class="flex gap-4 pt-2">
+                                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                        <i class="fas fa-save mr-2"></i><span id="save-btn-text">Lưu Món</span>
+                                    </button>
+                                    <button type="button" id="cancel-edit-btn" class="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 hidden">Hủy</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h2 class="text-2xl font-bold mb-4">Quản Lý Phân Loại</h2>
+                            <form id="add-category-form" class="flex gap-2 mb-4">
+                                <input type="text" id="new-category-name" placeholder="Nhập tên loại mới..." required class="flex-grow block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                <button type="submit" class="flex-shrink-0 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"><i class="fas fa-plus"></i> Thêm</button>
+                            </form>
+                            <div id="category-management-list" class="space-y-2 max-h-60 overflow-y-auto">
+                                <p class="text-center text-gray-500">Đang tải danh sách phân loại...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold mb-4">Danh Sách Món Ăn Hiện Tại</h2>
+                        <p id="loading-products" class="text-center text-gray-500 py-4">Đang tải danh sách món ăn...</p>
+                        <div id="product-list" class="space-y-6"></div>
+                    </div>
+                </div>
+
+                <div id="reports-tab" class="tab-content">
+                    <div class="text-center p-16 bg-white rounded-lg shadow-md">
+                        <i class="fas fa-chart-line text-6xl text-gray-400 mb-4"></i>
+                        <h2 class="text-2xl font-bold text-gray-700">Tính năng Báo cáo Doanh thu</h2>
+                        <p class="text-gray-500 mt-2">Sẽ được phát triển trong tương lai để giúp bạn theo dõi hiệu quả kinh doanh.</p>
+                    </div>
+                </div>
+
+                <div id="quannhau-tab" class="tab-content">
+                    <iframe id="quannhau-iframe" src="/Quannhau/index.html"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <audio id="notification-sound" src="/goiMonQR/Alarm.mp3" preload="auto"></audio>
+    <div id="toast-notification" class="hidden fixed top-5 right-5 bg-blue-500 text-white py-3 px-5 rounded-lg shadow-lg z-50 flex items-center gap-3">
+        <i class="fas fa-receipt"></i>
+        <span id="toast-message"></span>
+    </div>
+
+    <script type="module">
+        // --- PAGE GUARD & LOGOUT ---
+        if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+            alert("Vui lòng đăng nhập để truy cập trang quản lý.");
+            window.location.href = '/';
+        }
+
+        import { db } from '/goiMonQR/js/firebase.js';
+        import { voiceEngine } from '/goiMonQR/js/voice-engine.js';
+        import { restaurantId, restaurantName } from '/js/config.js';
+        import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+        // --- COLLECTION REFERENCES ---
+        const menuCollection = collection(db, `${restaurantId}-menu`);
+        const categoriesCollection = collection(db, `${restaurantId}-categories`);
+        const ordersCollection = collection(db, `${restaurantId}-orders`);
+
+        // --- DOM ELEMENTS ---
+        const soundModal = document.getElementById('sound-modal');
+        const enableSoundBtn = document.getElementById('enable-sound-btn');
+        const mainContainer = document.getElementById('main-container');
+        const notificationSound = document.getElementById('notification-sound');
+        const toastNotification = document.getElementById('toast-notification');
+        const toastMessage = document.getElementById('toast-message');
+        const tabs = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const ordersGrid = document.getElementById('orders-grid');
+        const loadingMessage = document.getElementById('loading-message');
+        const addCategoryForm = document.getElementById('add-category-form');
+        const categoryManagementList = document.getElementById('category-management-list');
+        const productForm = document.getElementById('product-form');
+        const productListDiv = document.getElementById('product-list');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+
+        // --- GLOBAL STATE ---
+        let allProducts = [];
+        let allCategories = [];
+
+        // --- HELPER FUNCTIONS ---
+        const formatCurrency = (amount) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+        const normalizeCategory = (str) => str ? str.trim().charAt(0).toUpperCase() + str.trim().slice(1) : '';
+        const showToast = (message) => {
+            toastMessage.textContent = message;
+            toastNotification.classList.remove('hidden');
+            setTimeout(() => toastNotification.classList.add('hidden'), 5000);
+        };
+
+        // --- KITCHEN TAB FUNCTIONS ---
+        const renderOrder = (order) => {
+            const orderCard = document.createElement('div');
+            orderCard.id = `order-${order.id}`;
+            orderCard.className = 'bg-white rounded-lg shadow-lg p-4 flex flex-col order-card-new';
+            const itemsHtml = order.items.map(item => `<li class="flex justify-between"><span>${item.name}</span><span class="font-semibold">x${item.quantity}</span></li>`).join('');
+            const notesHtml = order.notes ? `<div class="mt-3 pt-3 border-t border-dashed border-gray-300"><p class="text-sm text-gray-800"><strong class="font-semibold text-red-600"><i class="fas fa-sticky-note mr-1"></i> Ghi chú:</strong></p><p class="text-sm text-gray-700 pl-2 italic">"${order.notes}"</p></div>` : '';
+            orderCard.innerHTML = `
+                <div class="border-b pb-2 mb-2">
+                    <h3 class="text-2xl font-bold">Bàn ${order.table}</h3>
+                    <p class="text-sm text-gray-500">Lúc: ${new Date(order.createdAt.seconds * 1000).toLocaleTimeString('vi-VN')}</p>
+                </div>
+                <div class="flex-grow mb-4">
+                    <ul class="space-y-1">${itemsHtml}</ul>
+                    ${notesHtml}
+                </div>
+                <div class="border-t pt-2 mt-auto">
+                     <p class="text-lg font-bold text-right">Tổng: ${formatCurrency(order.total)}</p>
+                    <button data-id="${order.id}" class="complete-btn mt-4 w-full bg-green-500 text-white py-2 rounded-lg font-bold hover:bg-green-600 transition-colors">Hoàn Thành</button>
+                </div>
+            `;
+            ordersGrid.prepend(orderCard);
+        };
+
+        ordersGrid.addEventListener('click', async (e) => {
+            const target = e.target.closest('.complete-btn');
+            if (!target) return;
+            const id = target.dataset.id;
+            target.disabled = true;
+            target.textContent = 'Đang xử lý...';
+            await updateDoc(doc(db, `${restaurantId}-orders`, id), { status: "completed" });
+        });
+
+        // --- MENU MANAGEMENT TAB FUNCTIONS ---
+        const renderCategories = (categories) => {
+            categoryManagementList.innerHTML = '';
+            if (categories.length === 0) {
+                categoryManagementList.innerHTML = '<p class="text-center text-gray-500">Chưa có phân loại nào.</p>';
+            } else {
+                categories.sort((a, b) => a.name.localeCompare(b.name)).forEach(cat => {
+                    const catEl = document.createElement('div');
+                    catEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded-md';
+                    catEl.innerHTML = `<span>${cat.name}</span><button data-id="${cat.id}" data-name="${cat.name}" class="delete-category-btn text-red-500 hover:text-red-700 w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center transition-colors"><i class="fas fa-trash"></i></button>`;
+                    categoryManagementList.appendChild(catEl);
+                });
+            }
+            const productCategorySelect = document.getElementById('product-category-select');
+            const currentVal = productCategorySelect.value;
+            productCategorySelect.innerHTML = '<option value="">-- Chọn loại món ăn --</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.name;
+                option.textContent = cat.name;
+                productCategorySelect.appendChild(option);
+            });
+            productCategorySelect.value = currentVal;
+        };
+
+        const renderProducts = (products) => {
+            productListDiv.innerHTML = '';
+            const loadingEl = document.getElementById('loading-products');
+            if (products.length === 0) {
+                loadingEl.textContent = 'Chưa có món ăn nào. Vui lòng thêm ở trên.';
+                loadingEl.style.display = 'block';
+                return;
+            }
+            loadingEl.style.display = 'none';
+            const groupedProducts = products.reduce((acc, product) => {
+                const category = product.category || 'Chưa phân loại';
+                if (!acc[category]) acc[category] = [];
+                acc[category].push(product);
+                return acc;
+            }, {});
+            Object.keys(groupedProducts).sort().forEach(category => {
+                const categorySection = document.createElement('div');
+                categorySection.className = 'mb-6 bg-white p-5 rounded-lg shadow-md';
+                categorySection.innerHTML = `<h3 class="text-xl font-bold text-gray-800 mb-3 pb-2 border-b">${category}</h3>`;
+                const itemsContainer = document.createElement('div');
+                itemsContainer.className = 'space-y-3';
+                groupedProducts[category].sort((a, b) => a.name.localeCompare(b.name)).forEach(product => {
+                    const productEl = document.createElement('div');
+                    productEl.className = 'flex items-center gap-4 p-3 rounded-md hover:bg-gray-50';
+                    const imageHtml = product.imageUrl ? `<img src="${product.imageUrl}" alt="${product.name}" class="w-16 h-16 object-cover rounded-md flex-shrink-0 shadow">` : `<div class="w-16 h-16 bg-gray-200 rounded-md flex items-center justify-center text-gray-400 flex-shrink-0"><i class="fas fa-image fa-lg"></i></div>`;
+                    const contentHtml = `
+                        <div class="flex-grow">
+                            <p class="font-bold text-lg">${product.name}</p>
+                            <p class="text-gray-600 text-sm">${formatCurrency(product.price)}</p>
+                            ${product.description ? `<p class="text-sm text-gray-500 mt-1 italic">"${product.description}"</p>` : ''}
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <button data-id="${product.id}" class="edit-btn text-blue-500 hover:text-blue-700 w-10 h-10 rounded-full hover:bg-blue-50 flex items-center justify-center"><i class="fas fa-edit"></i></button><button data-id="${product.id}" class="delete-btn text-red-500 hover:text-red-700 w-10 h-10 rounded-full hover:bg-red-50 flex items-center justify-center"><i class="fas fa-trash"></i></button>
+                        </div>`;
+                    productEl.innerHTML = imageHtml + contentHtml;
+                    itemsContainer.appendChild(productEl);
+                });
+                categorySection.appendChild(itemsContainer);
+                productListDiv.appendChild(categorySection);
+            });
+        };
+
+        const resetProductForm = () => {
+            productForm.reset();
+            document.getElementById('product-id').value = '';
+            document.getElementById('product-form-title').textContent = 'Thêm Món Ăn Mới';
+            document.getElementById('save-btn-text').textContent = 'Lưu Món';
+            cancelEditBtn.classList.add('hidden');
+            document.getElementById('product-name').focus();
+        };
+
+        addCategoryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newCategoryNameInput = document.getElementById('new-category-name');
+            const categoryName = normalizeCategory(newCategoryNameInput.value);
+            if (!categoryName || allCategories.some(cat => cat.name === categoryName)) {
+                alert('Phân loại này đã tồn tại hoặc không hợp lệ!');
+                return;
+            }
+            await addDoc(categoriesCollection, { name: categoryName });
+            addCategoryForm.reset();
+        });
+
+        categoryManagementList.addEventListener('click', async (e) => {
+            const target = e.target.closest('.delete-category-btn');
+            if (!target) return;
+            const categoryId = target.dataset.id;
+            const categoryName = target.dataset.name;
+            if (allProducts.some(p => p.category === categoryName)) {
+                alert(`Không thể xóa! Phân loại "${categoryName}" đang được sử dụng.`);
+                return;
+            }
+            if (confirm(`Bạn có chắc muốn xóa phân loại "${categoryName}"?`)) {
+                await deleteDoc(doc(db, `${restaurantId}-categories`, categoryId));
+            }
+        });
+
+        productForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('product-id').value;
+            const productData = {
+                name: document.getElementById('product-name').value,
+                price: Number(document.getElementById('product-price').value),
+                description: document.getElementById('product-description').value.trim(),
+                imageUrl: document.getElementById('product-image-url').value.trim(),
+                category: document.getElementById('product-category-select').value
+            };
+            if (!productData.category) {
+                alert("Vui lòng chọn phân loại cho món ăn!");
+                return;
+            }
+            if (id) {
+                await updateDoc(doc(db, `${restaurantId}-menu`, id), productData);
+            } else {
+                await addDoc(menuCollection, productData);
+            }
+            resetProductForm();
+        });
+
+        productListDiv.addEventListener('click', async (e) => {
+            const target = e.target.closest('button');
+            if (!target) return;
+            const id = target.dataset.id;
+            if (target.classList.contains('delete-btn')) {
+                if (confirm('Bạn có chắc muốn xóa món ăn này?')) {
+                    await deleteDoc(doc(db, `${restaurantId}-menu`, id));
+                }
+            } else if (target.classList.contains('edit-btn')) {
+                const product = allProducts.find(p => p.id === id);
+                if (product) {
+                    document.getElementById('product-id').value = id;
+                    document.getElementById('product-name').value = product.name;
+                    document.getElementById('product-price').value = product.price;
+                    document.getElementById('product-description').value = product.description || '';
+                    document.getElementById('product-image-url').value = product.imageUrl || '';
+                    document.getElementById('product-category-select').value = product.category;
+                    document.getElementById('product-form-title').textContent = 'Chỉnh Sửa Món Ăn';
+                    document.getElementById('save-btn-text').textContent = 'Cập Nhật';
+                    cancelEditBtn.classList.remove('hidden');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    document.getElementById('product-name').focus();
+                }
+            }
+        });
+        cancelEditBtn.addEventListener('click', resetProductForm);
+
+        // --- INITIALIZATION & MAIN APP LOGIC ---
+        const startDataListeners = () => {
+            onSnapshot(query(ordersCollection, where("status", "==", "new")), (snapshot) => {
+                loadingMessage.style.display = snapshot.empty && ordersGrid.childElementCount === 1 ? 'block' : 'none';
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        const newOrder = { id: change.doc.id, ...change.doc.data() };
+                        renderOrder(newOrder);
+                        notificationSound.play().catch(e => console.log("Lỗi phát âm thanh:", e));
+                        let announcementText = '';
+                        const hasItems = newOrder.items && newOrder.items.length > 0;
+                        const hasNotes = newOrder.notes && newOrder.notes.trim() !== '';
+                        if (hasItems) {
+                            const itemsText = newOrder.items.map(item => `${item.quantity} ${item.name}`).join(', ');
+                            announcementText = `Có đơn mới từ Bàn ${newOrder.table}. Gồm có: ${itemsText}`;
+                            if (hasNotes) {
+                                announcementText += `. Có ghi chú thêm: ${newOrder.notes}`;
+                            }
+                        } else if (hasNotes) {
+                            announcementText = `Bàn ${newOrder.table} có yêu cầu mới. Ghi chú: ${newOrder.notes}`;
+                        }
+                        voiceEngine.speak(announcementText);
+                        showToast(`Có đơn hàng mới từ Bàn ${newOrder.table}!`);
+                    }
+                    if (change.type === "removed") {
+                        const cardToRemove = document.getElementById(`order-${change.doc.id}`);
+                        if (cardToRemove) {
+                            cardToRemove.classList.add('order-card-removing');
+                            setTimeout(() => cardToRemove.remove(), 500);
+                        }
+                    }
+                });
+            });
+
+            onSnapshot(query(categoriesCollection), (snapshot) => {
+                allCategories = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderCategories(allCategories);
+            });
+
+            onSnapshot(query(menuCollection), (snapshot) => {
+                allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderProducts(allProducts);
+            });
+        };
+
+        const startApp = () => {
+            voiceEngine.initialize();
+            notificationSound.play().then(() => {
+                notificationSound.pause();
+                notificationSound.currentTime = 0;
+            }).catch(error => {});
+
+            soundModal.classList.add('hidden');
+            mainContainer.classList.remove('hidden');
+            startDataListeners();
+        };
+
+        // --- EVENT LISTENERS ---
+        enableSoundBtn.addEventListener('click', startApp);
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            sessionStorage.removeItem('isLoggedIn');
+            alert("Bạn đã đăng xuất.");
+            window.location.href = '/';
+        });
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const target = document.getElementById(tab.dataset.tab + '-tab');
+                tabContents.forEach(tc => tc.classList.remove('active'));
+                target.classList.add('active');
+            });
+        });
+
+    </script>
+    <footer class="mt-8 text-center text-sm text-gray-500">
+        <div class="max-w-7xl mx-auto py-4 border-t border-gray-200">
+            <p>&copy; Chi tiết triển khai hệ thống gọi món trực tuyến liên hệ Mr Minh SĐT: 0936.666.664</p>
+        </div>
+    </footer>
+</body>
+</html>

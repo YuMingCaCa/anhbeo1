@@ -1,0 +1,6 @@
+/* General body styling */
+body {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    /* Add padding to the bottom to prevent the fixed bar from overlapping content */
+    padding-bottom: 100px; 
+}
