@@ -1,5 +1,5 @@
 import { db, collection, addDoc, onSnapshot, doc, deleteDoc, query, orderBy } from '../config/firebase.js';
-import { restaurantId } from '/js/config.js';
+import { restaurantId } from '../../../js/config.js';
 
 // --- Lấy các phần tử HTML ---
 const formThemBan = document.getElementById('form-them-ban');

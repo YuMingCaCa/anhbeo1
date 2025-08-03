@@ -1,7 +1,7 @@
 // Import Firebase functions
 import { db } from './firebase.js';
 import { collection, onSnapshot, addDoc, serverTimestamp, query } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-import { restaurantId, restaurantName } from '/js/config.js';
+import { restaurantId, restaurantName } from '../../js/config.js';
 
 // Collection references
 const menuCollection = collection(db, `${restaurantId}-menu`);

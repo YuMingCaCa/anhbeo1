@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thực Đơn</title>
     
+    <script type="module">
+        import { BASE_URL } from './js/config.js';
+        window.BASE_URL = BASE_URL; // Gán BASE_URL vào window để các script khác có thể truy cập
+    </script>
+
     <!-- Thêm dòng này để chỉ định icon cho tab trình duyệt -->
     <link rel="icon" type="image/x-icon" href="goiMonQR/favicon.ico">
     <!-- External CSS -->
@@ -26,7 +31,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 pb-40">
 
     <!-- Login functionality is handled by js/login.js -->
     <button id="login-trigger-btn" aria-label="Đăng nhập quản trị" class="fixed top-4 right-4 bg-gray-800 text-white w-12 h-12 rounded-full shadow-lg z-20 flex items-center justify-center hover:bg-gray-700 transition-colors">

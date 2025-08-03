@@ -1,5 +1,5 @@
 import { db, collection, addDoc, Timestamp } from '../config/firebase.js';
-import { restaurantId } from '/js/config.js';
+import { restaurantId } from '../../../js/config.js';
 
 // --- Lấy các phần tử HTML (Nhập hàng) ---
 const formNhapHang = document.getElementById('form-nhap-hang');

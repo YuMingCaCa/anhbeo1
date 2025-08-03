@@ -1,5 +1,5 @@
 import { db, collection, query, where, getDocs, Timestamp, orderBy, doc, updateDoc, deleteDoc } from '../config/firebase.js';
-import { restaurantId } from '/js/config.js';
+import { restaurantId } from '../../../js/config.js';
 import { currencyFormatter } from '../utils/formatters.js';
 
 // --- Lấy các phần tử HTML ---

@@ -1,5 +1,5 @@
 import { db, collection, addDoc, doc, setDoc, onSnapshot, deleteDoc, Timestamp, query, getDoc } from '../config/firebase.js';
-import { restaurantId, restaurantName } from '/js/config.js';
+import { restaurantId, restaurantName } from '../../../js/config.js';
 import { currencyFormatter } from '../utils/formatters.js';
 import { menuData } from './menu.js';
 import { danhSachBanData } from './ban.js';
@@ -296,7 +296,7 @@ export async function huyThanhToan(hoaDonId, hoaDonData) {
 /**
  * Thanh toán cho bàn đang được chọn.
  */
-async function thanhToan() {
+async function thanhToan(onSaleCompletedCallback) {
     const donHangHienTai = donHangCuaCacBan.get(banDuocChon);
     if (!donHangHienTai || donHangHienTai.chi_tiet_mon.length === 0) {
         alert("Bàn trống hoặc chưa chọn bàn, không có gì để thanh toán!");

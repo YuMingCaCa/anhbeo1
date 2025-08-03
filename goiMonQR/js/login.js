@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Nếu đúng, chuyển hướng đến trang dashboard
                 // Lưu trạng thái đã đăng nhập vào sessionStorage
                 sessionStorage.setItem('isLoggedIn', 'true');
-                window.location.href = '/goiMonQR/dashboard/'; // Chuyển hướng đến thư mục dashboard một cách rõ ràng hơn
+                window.location.href = 'goiMonQR/dashboard/'; // Chuyển hướng đến thư mục dashboard một cách rõ ràng hơn
             } else {
                 // Sai mật khẩu
                 errorMessage.textContent = 'Mật khẩu không chính xác.';

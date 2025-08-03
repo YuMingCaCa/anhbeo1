@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Công Cụ Tạo Mã QR Hàng Loạt</title>
     <!-- Icon cho tab trình duyệt -->
-    <link rel="icon" type="image/x-icon" href="../favicon.ico">
+    <link rel="icon" type="image/x-icon" href="${window.BASE_URL}/goiMonQR/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&display=swap" rel="stylesheet">
@@ -83,7 +83,7 @@
     </div>
 
     <script type="module">
-        import { restaurantId } from '../../js/config.js';
+        import { restaurantId, BASE_URL } from '../../js/config.js';
 
         const generateBtn = document.getElementById('generate-btn');
         const printBtn = document.getElementById('print-btn');
@@ -108,7 +108,7 @@
             qrCodeContainer.classList.add(`print-cols-${qrsPerPage}`);
 
             for (let i = 1; i <= tableCount; i++) {
-                const fullUrl = `${baseUrl}?table=${i}&id=${restaurantId}`;
+                const fullUrl = `${BASE_URL}${baseUrl}?table=${i}&id=${restaurantId}`;
                 
                 const qrItem = document.createElement('div');
                 qrItem.className = 'qr-item bg-white p-4 rounded-lg shadow-md flex flex-col items-center text-center';

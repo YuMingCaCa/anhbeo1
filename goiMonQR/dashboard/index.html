@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
-    <link rel="icon" type="image/x-icon" href="/goiMonQR/favicon.ico">
+    <title>Bảng Điều Khiển</title>
+    <link rel="icon" type="image/x-icon" href="../favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&display=swap" rel="stylesheet">
@@ -35,7 +35,7 @@
             <header class="text-center mb-8 relative">
                 <h1 id="dashboard-title" class="text-4xl font-bold text-gray-800">Bảng Điều Khiển</h1>
                 <p class="text-gray-600 mt-2">Quản lý tổng hợp cho chủ quán</p>
-                <a href="/goiMonQR/generate-qr" target="_blank" class="absolute top-0 right-0 bg-teal-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-teal-600 transition-colors flex items-center gap-2 shadow-md no-print">
+            <a href="../generate-qr/" target="_blank" class="absolute top-0 right-0 bg-teal-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-teal-600 transition-colors flex items-center gap-2 shadow-md no-print">
                     <i class="fas fa-qrcode"></i><span>Tạo mã QR</span>
                 </a>
                 <button id="logout-btn" class="absolute top-0 left-0 bg-red-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-600 transition-colors flex items-center gap-2 shadow-md">
@@ -125,13 +125,14 @@
                 </div>
 
                 <div id="quannhau-tab" class="tab-content">
-                    <iframe id="quannhau-iframe" src="/Quannhau/index.html"></iframe>
+                    <iframe id="quannhau-iframe" src="../../../Quannhau/index.html"></iframe>
                 </div>
             </div>
         </div>
     </div>
     
-    <audio id="notification-sound" src="/goiMonQR/Alarm.mp3" preload="auto"></audio>
+    <audio id="notification-sound" src="../Alarm.mp3" preload="auto"></audio>
+
     <div id="toast-notification" class="hidden fixed top-5 right-5 bg-blue-500 text-white py-3 px-5 rounded-lg shadow-lg z-50 flex items-center gap-3">
         <i class="fas fa-receipt"></i>
         <span id="toast-message"></span>
@@ -141,12 +142,12 @@
         // --- PAGE GUARD & LOGOUT ---
         if (sessionStorage.getItem('isLoggedIn') !== 'true') {
             alert("Vui lòng đăng nhập để truy cập trang quản lý.");
-            window.location.href = '/';
+            window.location.href = '../../';
         }
 
-        import { db } from '/goiMonQR/js/firebase.js';
-        import { voiceEngine } from '/goiMonQR/js/voice-engine.js';
-        import { restaurantId, restaurantName } from '/js/config.js';
+        import { db } from '../js/firebase.js';
+        import { voiceEngine } from '../js/voice-engine.js';
+        import { restaurantId, restaurantName } from '../../js/config.js';
         import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
         // --- COLLECTION REFERENCES ---
@@ -431,7 +432,7 @@
         document.getElementById('logout-btn').addEventListener('click', () => {
             sessionStorage.removeItem('isLoggedIn');
             alert("Bạn đã đăng xuất.");
-            window.location.href = '/';
+            window.location.href = '../../';
         });
 
         tabs.forEach(tab => {

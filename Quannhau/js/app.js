@@ -1,4 +1,4 @@
-import { restaurantName } from '/js/config.js';
+import { restaurantName } from '../../js/config.js';
 import { initNhapHang } from './modules/nhapHang.js';
 import { initBanHang, renderLuoiBanAn, huyThanhToan, generateAndPrintInvoice } from './modules/banHang.js';
 import { initMenu } from './modules/menu.js';
