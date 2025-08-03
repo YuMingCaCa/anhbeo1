@@ -10,4 +10,4 @@ export const restaurantName = 'Quán Anh Béo'; // <-- THAY TÊN QUÁN MỚI VÀ
 // Cấu hình BASE_URL cho việc triển khai trên GitHub Pages hoặc các môi trường khác.
 // Khi chạy cục bộ (ví dụ với Live Server), giữ nguyên là ''.
 // Khi triển khai lên GitHub Pages, thay đổi thành '/tên_repository_của_bạn' (ví dụ: '/TestQuan').
-export const BASE_URL = ''; // <-- THAY ĐỔI KHI TRIỂN KHAI LÊN GITHUB PAGES
+export const BASE_URL = '/anhbeo1'; // <-- QUAN TRỌNG: Đã cập nhật cho GitHub Pages. Nếu tên repo khác, hãy sửa lại.
