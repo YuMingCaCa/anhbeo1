@@ -47,11 +47,7 @@
             <h1 class="text-3xl font-bold text-center mb-2">Công cụ tạo mã QR hàng loạt</h1>
             <p class="text-center text-gray-600 mb-6">Tạo mã QR tĩnh (không bao giờ hết hạn) cho tất cả các bàn.</p>
             
-            <div class="grid md:grid-cols-3 gap-4">
-                <div>
-                    <label for="base-url" class="block text-sm font-medium text-gray-700">Đường dẫn trang gọi món (URL)</label>
-                    <input type="text" id="base-url" value="/index.html" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                </div>
+            <div class="grid md:grid-cols-2 gap-4">
                 <div>
                     <label for="table-count" class="block text-sm font-medium text-gray-700">Tổng số bàn cần tạo</label>
                     <input type="number" id="table-count" value="20" min="1" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
@@ -85,21 +81,22 @@
     <script type="module">
         import { restaurantId, BASE_URL } from '/js/config.js';
 
+        // Đường dẫn đến trang gọi món của khách hàng, không cần người dùng nhập.
+        const CUSTOMER_ORDERING_PAGE_PATH = '/index.html';
+
         const generateBtn = document.getElementById('generate-btn');
         const printBtn = document.getElementById('print-btn');
         const qrCodeContainer = document.getElementById('qrcode-container');
-        const baseUrlInput = document.getElementById('base-url');
         const tableCountInput = document.getElementById('table-count');
         const qrsPerPageSelect = document.getElementById('qrs-per-page');
 
         generateBtn.addEventListener('click', () => {
             qrCodeContainer.innerHTML = ''; // Xóa các mã cũ
-            const baseUrl = baseUrlInput.value;
             const tableCount = parseInt(tableCountInput.value, 10);
             const qrsPerPage = qrsPerPageSelect.value;
 
-            if (!baseUrl || isNaN(tableCount) || tableCount <= 0) {
-                alert('Vui lòng nhập đúng đường dẫn và số bàn hợp lệ.');
+            if (isNaN(tableCount) || tableCount <= 0) {
+                alert('Vui lòng nhập số bàn hợp lệ.');
                 return;
             }
 
@@ -110,7 +107,7 @@
             for (let i = 1; i <= tableCount; i++) {
                 // --- LOGIC TẠO URL ĐÃ SỬA ---
                 // 1. Kết hợp BASE_URL và đường dẫn trang gọi món một cách an toàn
-                const path = (BASE_URL + '/' + baseUrl.replace(/^\//, '')).replace(/\/+/g, '/');
+                const path = (BASE_URL + '/' + CUSTOMER_ORDERING_PAGE_PATH.replace(/^\//, '')).replace(/\/+/g, '/');
 
                 // 2. Tạo một URL tuyệt đối (full URL) để đảm bảo mã QR hoạt động trên mọi thiết bị
                 const absoluteUrl = new URL(path, window.location.origin);
