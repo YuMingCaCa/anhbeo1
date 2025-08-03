@@ -83,7 +83,7 @@
     </div>
 
     <script type="module">
-        import { restaurantId, BASE_URL } from '../../js/config.js';
+        import { restaurantId, BASE_URL } from '/js/config.js';
 
         const generateBtn = document.getElementById('generate-btn');
         const printBtn = document.getElementById('print-btn');
@@ -108,14 +108,21 @@
             qrCodeContainer.classList.add(`print-cols-${qrsPerPage}`);
 
             for (let i = 1; i <= tableCount; i++) {
-                const fullUrl = `${BASE_URL}${baseUrl}?table=${i}&id=${restaurantId}`;
-                
+                // --- LOGIC TẠO URL ĐÃ SỬA ---
+                // 1. Kết hợp BASE_URL và đường dẫn trang gọi món một cách an toàn
+                const path = (BASE_URL + '/' + baseUrl.replace(/^\//, '')).replace(/\/+/g, '/');
+
+                // 2. Tạo một URL tuyệt đối (full URL) để đảm bảo mã QR hoạt động trên mọi thiết bị
+                const absoluteUrl = new URL(path, window.location.origin);
+                absoluteUrl.searchParams.set('table', i);
+                absoluteUrl.searchParams.set('id', restaurantId);
+
                 const qrItem = document.createElement('div');
                 qrItem.className = 'qr-item bg-white p-4 rounded-lg shadow-md flex flex-col items-center text-center';
 
                 const qrCodeEl = document.createElement('div');
                 qrCodeEl.id = `qrcode-${i}`;
-                
+
                 const label = document.createElement('p');
                 label.className = 'mt-3 font-bold text-lg';
                 label.textContent = `Bàn ${i}`;
@@ -125,7 +132,7 @@
                 qrCodeContainer.appendChild(qrItem);
 
                 new QRCode(qrCodeEl, {
-                    text: fullUrl,
+                    text: absoluteUrl.href, // Sử dụng URL tuyệt đối đã tạo
                     width: 128,
                     height: 128,
                     colorDark : "#000000",
@@ -133,7 +140,7 @@
                     correctLevel : QRCode.CorrectLevel.H
                 });
             }
-            
+
             if(tableCount > 0) {
                 printBtn.classList.remove('hidden');
             } else {
