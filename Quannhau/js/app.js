@@ -1,76 +1,59 @@
-import { restaurantName } from '../../js/config.js';
+// d:/1 HE THONG WEB/TestQuan/Quannhau/js/app.js
+
+import { initBanHang, huyThanhToan, generateAndPrintInvoice } from './modules/banHang.js';
 import { initNhapHang } from './modules/nhapHang.js';
-import { initBanHang, renderLuoiBanAn, huyThanhToan, generateAndPrintInvoice } from './modules/banHang.js';
-import { initMenu } from './modules/menu.js';
-import { initBaoCao, loadBaoCaoData, hienThiBaoCaoTongQuan, hienThiBaoCaoNgay, hienThiBieuDoLoiNhuan } from './modules/baoCao.js';
-import { initBan } from './modules/ban.js';
+import { initBaoCao, loadBaoCaoData } from './modules/baoCao.js';
 
-// Hàm này sẽ chạy khi toàn bộ trang web đã được tải xong
-document.addEventListener('DOMContentLoaded', () => { 
-    console.log("Ứng dụng đã sẵn sàng!");
-
-    // --- ĐỊNH NGHĨA CÁC HÀM CẬP NHẬT CHUNG ---
-    // Hàm này sẽ được gọi mỗi khi có dữ liệu thay đổi (bán hàng, nhập hàng)
-    const refreshAllReports = () => {
-        hienThiBaoCaoTongQuan();
-        hienThiBaoCaoNgay();
-        hienThiBieuDoLoiNhuan();
-    };
-
-    // Cập nhật tiêu đề trang và tiêu đề chính từ config
-    updatePageTitles();
-    
-    // Khởi tạo chức năng chuyển đổi tab
-    initTabs();
-
-    // Khởi tạo các module quản lý dữ liệu nền (phải chạy trước các module chức năng)
-    initMenu();
-    // Truyền hàm render lưới bàn vào module `ban` để nó có thể gọi lại khi có thay đổi
-    initBan(renderLuoiBanAn);
-
-    // Khởi tạo các module chức năng chính
-    // Truyền hàm cập nhật báo cáo vào module Nhập Hàng
-    initNhapHang(refreshAllReports);
-    
-    // Truyền hàm cập nhật báo cáo vào module Bán Hàng
-    initBanHang(refreshAllReports);
-
-    // Truyền các hàm cần thiết vào module Báo Cáo
-    initBaoCao({ onCancelInvoice: huyThanhToan, onPrintInvoice: generateAndPrintInvoice });
-});
-
-function initTabs() {
-    const tabLinks = document.querySelectorAll('.tab-link');
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = document.querySelectorAll('.tab-link');
     const tabContents = document.querySelectorAll('.tab-content');
-    let isBaoCaoLoaded = false; // Cờ để kiểm tra xem tab báo cáo đã tải dữ liệu chưa
 
-    tabLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            const tabId = link.dataset.tab;
+    // --- LOGIC CHUYỂN TAB ---
+    tabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            // Bỏ qua nếu là link hướng dẫn
+            if (e.currentTarget.tagName === 'A') return;
 
-            // Nếu nhấn vào tab báo cáo và dữ liệu chưa được tải, thì tải nó
-            if (tabId === 'tab-bao-cao' && !isBaoCaoLoaded) {
-                loadBaoCaoData();
-                isBaoCaoLoaded = true; // Đánh dấu đã tải để không tải lại
-            }
+            e.preventDefault();
 
-            tabLinks.forEach(l => l.classList.remove('active'));
+            // Bỏ active ở tất cả các tab và nội dung
+            tabs.forEach(t => t.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
 
-            link.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
+            // Active tab và nội dung được chọn
+            tab.classList.add('active');
+            const targetTabContent = document.getElementById(tab.dataset.tab);
+            if (targetTabContent) {
+                targetTabContent.classList.add('active');
+            }
+
+            // Tải dữ liệu cho tab báo cáo CHỈ KHI người dùng nhấn vào nó
+            // Đây là một tối ưu để không tải dữ liệu nặng khi không cần thiết.
+            if (tab.dataset.tab === 'tab-bao-cao') {
+                loadBaoCaoData();
+            }
         });
     });
-}
 
-/**
- * Cập nhật các tiêu đề của trang web dựa trên tên nhà hàng trong config.
- */
-function updatePageTitles() {
-    const title = `Quản lý - ${restaurantName}`;
-    document.title = title;
-    const mainTitleElement = document.getElementById('main-title');
-    if (mainTitleElement) {
-        mainTitleElement.textContent = title;
-    }
-}
+    // --- KHỞI TẠO CÁC MODULE VÀ KẾT NỐI CHÚNG ---
+
+    /**
+     * Hàm callback này được truyền cho các module Bán Hàng và Nhập Kho.
+     * Khi có một hành động làm thay đổi dữ liệu (thanh toán, nhập hàng mới),
+     * nó sẽ được gọi để làm mới tab báo cáo nếu tab đó đang được mở.
+     */
+    const refreshBaoCaoIfNeeded = () => {
+        if (document.getElementById('tab-bao-cao').classList.contains('active')) {
+            loadBaoCaoData(); // Tải lại toàn bộ dữ liệu cho tab báo cáo
+        }
+    };
+
+    // Khởi tạo các module và truyền các hàm cần thiết
+    initBanHang(refreshBaoCaoIfNeeded);
+    initNhapHang(refreshBaoCaoIfNeeded);
+    initBaoCao({
+        onCancelInvoice: huyThanhToan, // Truyền hàm hủy thanh toán từ banHang.js
+        onPrintInvoice: generateAndPrintInvoice // Truyền hàm in hóa đơn từ banHang.js
+    });
+});
+

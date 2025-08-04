@@ -1,4 +1,15 @@
-import { db, collection, query, where, getDocs, Timestamp, orderBy, doc, updateDoc, deleteDoc } from '../config/firebase.js';
+import { db } from '../../../js/firebase.js';
+import {
+    collection,
+    query,
+    where,
+    getDocs,
+    Timestamp,
+    orderBy,
+    doc,
+    updateDoc,
+    deleteDoc
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 import { restaurantId } from '../../../js/config.js';
 import { currencyFormatter } from '../utils/formatters.js';
 
@@ -123,8 +134,8 @@ export async function hienThiBaoCaoTongQuan() {
                 <td>${currencyFormatter.format(data.don_gia)}</td>
                 <td>${currencyFormatter.format(data.thanh_tien)}</td>
                 <td>
-                    <button class="btn-sua-mon" data-id="${doc.id}" data-soluong="${data.so_luong}" data-dongia="${data.don_gia}">Sửa</button>
-                    <button class="btn-huy" data-id="${doc.id}">Xóa</button>
+                    <button class="btn-sua-chi-phi" data-id="${doc.id}" data-soluong="${data.so_luong}" data-dongia="${data.don_gia}">Sửa</button>
+                    <button class="btn-xoa-chi-phi" data-id="${doc.id}">Xóa</button>
                 </td>
             </tr>
         `;
@@ -167,7 +178,7 @@ function filterAndRenderSales() {
  * Sửa một khoản chi phí nhập kho.
  */
 async function suaChiPhi(e) {
-    if (!e.target.classList.contains('btn-sua-mon')) return;
+    if (!e.target.classList.contains('btn-sua-chi-phi')) return;
 
     const id = e.target.dataset.id;
     const soLuongCu = e.target.dataset.soluong;
@@ -208,7 +219,7 @@ async function suaChiPhi(e) {
  * Xóa một khoản chi phí nhập kho.
  */
 async function xoaChiPhi(e) {
-    if (!e.target.classList.contains('btn-huy')) return;
+    if (!e.target.classList.contains('btn-xoa-chi-phi')) return;
 
     const id = e.target.dataset.id;    
     if (confirm("Bạn có chắc chắn muốn xóa khoản chi phí này không? Thao tác này không thể hoàn tác.")) {
@@ -254,6 +265,16 @@ export async function hienThiBaoCaoNgay() {
  * Lấy dữ liệu và vẽ biểu đồ lợi nhuận 6 tháng gần nhất.
  */
 export async function hienThiBieuDoLoiNhuan() {
+    const ctx = profitChartCanvas.getContext('2d');
+
+    // Hủy biểu đồ cũ và hiển thị trạng thái tải
+    if (profitChartInstance) {
+        profitChartInstance.destroy();
+    }
+    const parent = profitChartCanvas.parentElement;
+    parent.style.position = 'relative';
+    parent.innerHTML = '<canvas id="profit-chart"></canvas><div id="chart-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.7); color: #555; font-style: italic;">Đang tải dữ liệu biểu đồ...</div>';
+
     const labels = [];
     const profitData = [];
     const now = new Date();
@@ -275,14 +296,19 @@ export async function hienThiBieuDoLoiNhuan() {
         profitData.push(monthlyRevenue - monthlyCost);
     }
 
-    // Hủy biểu đồ cũ nếu tồn tại để vẽ lại
-    if (profitChartInstance) {
-        profitChartInstance.destroy();
+    // Xóa overlay và vẽ biểu đồ
+    parent.innerHTML = '<canvas id="profit-chart"></canvas>';
+    const newCanvas = document.getElementById('profit-chart');
+    const newCtx = newCanvas.getContext('2d');
+
+    // Nếu không có dữ liệu nào, hiển thị thông báo
+    if (profitData.every(p => p === 0)) {
+        parent.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: #777;">Không có dữ liệu lợi nhuận trong 6 tháng qua.</div>';
+        return;
     }
 
     // Vẽ biểu đồ mới
-    const ctx = profitChartCanvas.getContext('2d');
-    profitChartInstance = new Chart(ctx, {
+    profitChartInstance = new Chart(newCtx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -371,8 +397,8 @@ export function initBaoCao({ onCancelInvoice, onPrintInvoice }) {
 
     if (bangChiTietChiPhi) {
         bangChiTietChiPhi.addEventListener('click', (e) => {
-            if (e.target.classList.contains('btn-sua-mon')) suaChiPhi(e);
-            if (e.target.classList.contains('btn-huy')) xoaChiPhi(e);
+            if (e.target.classList.contains('btn-sua-chi-phi')) suaChiPhi(e);
+            if (e.target.classList.contains('btn-xoa-chi-phi')) xoaChiPhi(e);
         });
     }
 

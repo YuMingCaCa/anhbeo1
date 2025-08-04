@@ -8,9 +8,7 @@
     <title>Quản lý Quán</title>
     
     <script type="module">
-        import { BASE_URL, restaurantName } from '../../js/config.js';
-        window.BASE_URL = BASE_URL; // Gán BASE_URL vào window để các script khác có thể truy cập
-
+        import { restaurantName } from '../../js/config.js';
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('main-title').textContent = `Quản lý ${restaurantName}`;
             document.title = `Quản lý ${restaurantName}`;
@@ -22,14 +20,12 @@
 <body>
 
     <div class="container">
-        <h1 id="main-title">Đang tải...</h1>
+        <h1 id="main-title">Quản lý Bán Hàng</h1>
 
         <!-- THANH ĐIỀU HƯỚNG TAB -->
         <div class="tabs">
             <button class="tab-link active" data-tab="tab-ban-hang">💰 Bán Hàng</button>
             <button class="tab-link" data-tab="tab-nhap-kho">📝 Nhập Kho</button>
-            <button class="tab-link" data-tab="tab-quan-ly-menu">🍽️ Quản lý Menu</button>
-            <button class="tab-link" data-tab="tab-quan-ly-ban">🛋️ Quản lý Bàn</button>
             <button class="tab-link" data-tab="tab-bao-cao">📊 Báo Cáo</button>
             <a href="huong-dan.html" target="_blank" class="tab-link help-link">❓ Hướng Dẫn</a>
         </div>
@@ -54,17 +50,14 @@
                         <div id="form-order-wrapper"> <!-- Wrapper để ẩn/hiện form -->
                             <form id="form-goi-mon">
                                 <div class="form-group">
-                                    <label for="ten-mon">Tên món</label>
-                                    <input type="text" id="ten-mon" list="danh-sach-mon-an" placeholder="Gõ hoặc chọn món..." required>
-                                    <datalist id="danh-sach-mon-an"></datalist>
+                                    <label for="select-mon-an">Chọn món:</label>
+                                    <select id="select-mon-an" required>
+                                        <option value="">-- Đang tải thực đơn... --</option>
+                                    </select>
                                 </div>
                                 <div class="form-group">
                                     <label for="so-luong-mon">Số lượng</label>
                                     <input type="number" id="so-luong-mon" value="1" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="don-gia-mon">Đơn giá (VND)</label>
-                                    <input type="number" id="don-gia-mon" placeholder="Ví dụ: 15000" required>
                                 </div>
                                 <button type="submit">Thêm Món</button>
                             </form>
@@ -115,67 +108,6 @@
                     </div>
                     <button type="submit">Lưu Lại</button>
                 </form>
-            </div>
-        </div>
-
-        <!-- Tab 4: Quản lý Menu -->
-        <div id="tab-quan-ly-menu" class="tab-content">
-            <div class="management-container">
-                <div class="card">
-                    <h2>Thêm Món Mới vào Menu</h2>
-                    <form id="form-them-mon-menu">
-                        <div class="form-group">
-                            <label for="ten-mon-menu">Tên món</label>
-                            <input type="text" id="ten-mon-menu" placeholder="Ví dụ: Cơm rang dưa bò" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="gia-mon-menu">Đơn giá (VND)</label>
-                            <input type="number" id="gia-mon-menu" placeholder="Ví dụ: 35000" required>
-                        </div>
-                        <button type="submit">Thêm vào Menu</button>
-                    </form>
-                </div>
-                <div class="card">
-                    <h2>Danh Sách Món Ăn Hiện Có</h2>
-                    <table id="bang-quan-ly-menu">
-                        <thead>
-                            <tr>
-                                <th>Tên Món</th>
-                                <th>Đơn Giá</th>
-                                <th>Hành Động</th>
-                            </tr>
-                        </thead>
-                        <tbody><!-- Dữ liệu menu sẽ được chèn vào đây --></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab 5: Quản lý Bàn -->
-        <div id="tab-quan-ly-ban" class="tab-content">
-            <div class="management-container">
-                <div class="card">
-                    <h2>Thêm Bàn Mới</h2>
-                    <form id="form-them-ban">
-                        <div class="form-group">
-                            <label for="ten-ban-moi">Tên/Số bàn</label>
-                            <input type="text" id="ten-ban-moi" placeholder="Ví dụ: 13, VIP 3, Sân Thượng" required>
-                        </div>
-                        <button type="submit">Thêm Bàn</button>
-                    </form>
-                </div>
-                <div class="card">
-                    <h2>Danh Sách Bàn Hiện Có</h2>
-                    <table id="bang-quan-ly-ban">
-                        <thead>
-                            <tr>
-                                <th>Tên/Số Bàn</th>
-                                <th>Hành Động</th>
-                            </tr>
-                        </thead>
-                        <tbody><!-- Dữ liệu bàn sẽ được chèn vào đây --></tbody>
-                    </table>
-                </div>
             </div>
         </div>
 
@@ -281,7 +213,7 @@
         </div>
     </div>
 
-    <!-- Quan trọng: Script phải có type="module" -->
+    <!-- Quan trọng: Tệp script này phải được tải cuối cùng và có type="module" -->
     <script type="module" src="js/app.js"></script>
 </body>
 </html>

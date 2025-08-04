@@ -1,10 +1,15 @@
+// d:/1 HE THONG WEB/TestQuan/js/firebase.js
+// Đây là tệp khởi tạo Firebase DUY NHẤT cho toàn bộ dự án.
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 
+// QUAN TRỌNG: Đây là nơi duy nhất chứa cấu hình Firebase.
+// Để bảo mật, bạn nên sử dụng Firebase App Check và thiết lập biến môi trường
+// thay vì để API key trực tiếp trong code.
 const firebaseConfig = {
-    apiKey: "AIzaSyDosCykP-rrTVAlwfAOXDGgGioxtt-VrOs", // **LƯU Ý BẢO MẬT**: Nên dùng biến môi trường
+    apiKey: "AIzaSyDosCykP-rrTVAlwfAOXDGgGioxtt-VrOs",
     authDomain: "quanlykinhdoanh-cb2b1.firebaseapp.com",
     projectId: "quanlykinhdoanh-cb2b1",
     storageBucket: "quanlykinhdoanh-cb2b1.firebasestorage.app",

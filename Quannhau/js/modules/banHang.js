@@ -1,21 +1,33 @@
-import { db, collection, addDoc, doc, setDoc, onSnapshot, deleteDoc, Timestamp, query, getDoc } from '../config/firebase.js';
+import { db } from '../../../js/firebase.js';
+import {
+    collection,
+    doc,
+    setDoc,
+    onSnapshot,
+    addDoc,
+    deleteDoc,
+    query,
+    getDoc,
+    runTransaction,
+    serverTimestamp,
+    getDocs,
+    orderBy,
+    Timestamp
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 import { restaurantId, restaurantName } from '../../../js/config.js';
 import { currencyFormatter } from '../utils/formatters.js';
-import { menuData } from './menu.js';
-import { danhSachBanData } from './ban.js';
 
 // =================================================================
 // --- CẤU HÌNH & KHAI BÁO ---
 // =================================================================
 
-// Lấy các phần tử HTML
+// --- Lấy các phần tử HTML ---
 const danhSachBanDiv = document.getElementById('danh-sach-ban');
 const soBanHienTaiSpan = document.getElementById('so-ban-hien-tai');
 const formOrderWrapper = document.getElementById('form-order-wrapper');
 const formGoiMon = document.getElementById('form-goi-mon');
-const inputTenMon = document.getElementById('ten-mon');
+const selectMonAn = document.getElementById('select-mon-an');
 const inputSoLuongMon = document.getElementById('so-luong-mon');
-const inputDonGiaMon = document.getElementById('don-gia-mon');
 const bangChiTietMonBody = document.querySelector('#bang-chi-tiet-mon tbody');
 const strongTamTinh = document.getElementById('tam-tinh');
 const btnInHoaDon = document.getElementById('btn-in-hoa-don');
@@ -24,6 +36,8 @@ const btnThanhToan = document.getElementById('btn-thanh-toan');
 // Biến trạng thái của module
 let banDuocChon = null; // Lưu số của bàn đang được chọn, ví dụ: '1'
 let donHangCuaCacBan = new Map(); // Lưu trạng thái tất cả các bàn đang có khách
+let danhSachBanData = []; // Lưu danh sách tất cả các bàn
+let toanBoThucDon = []; // Lưu toàn bộ thực đơn dạng [{id, name, price, ...}]
 
 // =================================================================
 // --- CÁC HÀM RENDER GIAO DIỆN ---
@@ -32,21 +46,28 @@ let donHangCuaCacBan = new Map(); // Lưu trạng thái tất cả các bàn đa
 /**
  * Vẽ lại toàn bộ lưới bàn ăn dựa trên trạng thái mới nhất.
  */
-export function renderLuoiBanAn() {
+function renderLuoiBanAn() {
     danhSachBanDiv.innerHTML = ''; // Xóa các bàn cũ
-    danhSachBanData.forEach(soBan => {
+
+    // CẢI TIẾN: Xử lý trường hợp chưa có bàn nào được thiết lập
+    if (danhSachBanData.length === 0) {
+        danhSachBanDiv.innerHTML = `<p class="no-tables-message">Chưa có bàn nào được thiết lập. Vui lòng vào <strong>Dashboard chính -> Quản Lý Bàn</strong> để thêm bàn.</p>`;
+        return;
+    }
+
+    danhSachBanData.forEach(ban => {
         const banElement = document.createElement('button');
         banElement.classList.add('table-item');
-        banElement.textContent = soBan;
-        banElement.dataset.soBan = soBan;
+        banElement.textContent = ban.ten_ban;
+        banElement.dataset.soBan = ban.ten_ban;
 
         // Thêm class 'occupied' nếu bàn có khách
-        if (donHangCuaCacBan.has(soBan)) {
+        if (donHangCuaCacBan.has(ban.ten_ban)) {
             banElement.classList.add('occupied');
         }
 
         // Thêm class 'selected' nếu là bàn đang được chọn
-        if (soBan === banDuocChon) {
+        if (ban.ten_ban === banDuocChon) {
             banElement.classList.add('selected');
         }
 
@@ -93,7 +114,7 @@ function chonBan(soBan) {
     formOrderWrapper.style.display = 'block'; // Hiện form gọi món
     renderChiTietDonHang();
     renderLuoiBanAn(); // Vẽ lại lưới để highlight bàn được chọn
-    inputTenMon.focus();
+    selectMonAn.focus();
 }
 
 /**
@@ -106,30 +127,72 @@ async function themMon(e) {
         return;
     }
 
+    const selectedOption = selectMonAn.options[selectMonAn.selectedIndex];
+    const monId = selectedOption.value;
+    const soLuong = parseFloat(inputSoLuongMon.value);
+
+    if (!monId || isNaN(soLuong) || soLuong <= 0) {
+        alert("Vui lòng chọn món và nhập số lượng hợp lệ.");
+        return;
+    }
+
+    const monDaChon = toanBoThucDon.find(m => m.id === monId);
+    if (!monDaChon) {
+        alert("Món ăn không hợp lệ.");
+        return;
+    }
+
     const monMoi = {
-        ten_mon: inputTenMon.value,
-        so_luong: parseFloat(inputSoLuongMon.value),
-        don_gia: parseFloat(inputDonGiaMon.value),
+        ten_mon: monDaChon.name,
+        so_luong: soLuong,
+        don_gia: monDaChon.price,
+        thanh_tien: soLuong * monDaChon.price,
     };
-    monMoi.thanh_tien = monMoi.so_luong * monMoi.don_gia;
-
-    let donHangHienTai = donHangCuaCacBan.get(banDuocChon) || {
-        ten_ban: banDuocChon,
-        chi_tiet_mon: [],
-        tong_tien: 0,
-        thoi_gian_tao: Timestamp.now()
-    };
-
-    donHangHienTai.chi_tiet_mon.push(monMoi);
-    donHangHienTai.tong_tien += monMoi.thanh_tien;
 
     const docRef = doc(db, "restaurants", restaurantId, "current_orders", `ban_${banDuocChon}`);
     try {
-        await setDoc(docRef, donHangHienTai);
+        await runTransaction(db, async (transaction) => {
+            const orderDoc = await transaction.get(docRef);
+
+            if (!orderDoc.exists()) {
+                // --- TẠO ĐƠN HÀNG MỚI ---
+                const newOrderData = {
+                    ten_ban: banDuocChon,
+                    chi_tiet_mon: [monMoi],
+                    tong_tien: monMoi.thanh_tien,
+                    thoi_gian_tao: serverTimestamp(),
+                    new_items_for_kitchen: {
+                        items: [monMoi],
+                        notes: `Nhân viên thêm món.`,
+                        timestamp: serverTimestamp()
+                    }
+                };
+                transaction.set(docRef, newOrderData);
+            } else {
+                // --- CẬP NHẬT ĐƠN HÀNG CÓ SẴN ---
+                const currentData = orderDoc.data();
+                const updatedItems = [...currentData.chi_tiet_mon];
+                const existingItemIndex = updatedItems.findIndex(item => item.ten_mon === monMoi.ten_mon && item.don_gia === monMoi.don_gia);
+
+                if (existingItemIndex > -1) {
+                    updatedItems[existingItemIndex].so_luong += monMoi.so_luong;
+                    updatedItems[existingItemIndex].thanh_tien += monMoi.thanh_tien;
+                } else {
+                    updatedItems.push(monMoi);
+                }
+
+                transaction.update(docRef, {
+                    chi_tiet_mon: updatedItems,
+                    tong_tien: currentData.tong_tien + monMoi.thanh_tien,
+                    new_items_for_kitchen: { items: [monMoi], notes: `Nhân viên thêm món.`, timestamp: serverTimestamp() }
+                });
+            }
+        });
         formGoiMon.reset();
-        inputTenMon.focus();
+        selectMonAn.focus();
     } catch (error) {
         console.error("Lỗi khi thêm món: ", error);
+        alert("Đã có lỗi xảy ra khi thêm món. Vui lòng thử lại.");
     }
 }
 
@@ -139,24 +202,31 @@ async function themMon(e) {
 async function xoaMon(e) {
     if (!e.target.classList.contains('btn-xoa-mon') || !banDuocChon) return;
 
-    let donHangHienTai = donHangCuaCacBan.get(banDuocChon);
-    if (!donHangHienTai) return;
-
     const index = parseInt(e.target.dataset.index);
-    const monBiXoa = donHangHienTai.chi_tiet_mon[index];
-
-    donHangHienTai.chi_tiet_mon.splice(index, 1);
-    donHangHienTai.tong_tien -= monBiXoa.thanh_tien;
-
     const docRef = doc(db, "restaurants", restaurantId, "current_orders", `ban_${banDuocChon}`);
+
     try {
-        if (donHangHienTai.chi_tiet_mon.length === 0) {
-            await deleteDoc(docRef); // Nếu hết món thì xóa luôn đơn hàng
-        } else {
-            await setDoc(docRef, donHangHienTai);
-        }
+        await runTransaction(db, async (transaction) => {
+            const orderDoc = await transaction.get(docRef);
+            if (!orderDoc.exists()) {
+                console.error("Không tìm thấy đơn hàng để xóa món.");
+                return;
+            }
+
+            const currentData = orderDoc.data();
+            const updatedItems = [...currentData.chi_tiet_mon];
+            const itemToRemove = updatedItems.splice(index, 1)[0]; // Xóa và lấy ra phần tử đã xóa
+
+            if (updatedItems.length === 0) {
+                transaction.delete(docRef); // Nếu hết món thì xóa luôn đơn hàng
+            } else {
+                const newTotal = currentData.tong_tien - itemToRemove.thanh_tien;
+                transaction.update(docRef, { chi_tiet_mon: updatedItems, tong_tien: newTotal });
+            }
+        });
     } catch (error) {
         console.error("Lỗi khi xóa món: ", error);
+        alert("Đã có lỗi xảy ra khi xóa món. Vui lòng thử lại.");
     }
 }
 
@@ -197,7 +267,7 @@ export function generateAndPrintInvoice(hoaDonData) {
                 body { font-family: 'Courier New', Courier, monospace; margin: 0; padding: 10px; font-size: 12px; }
                 .invoice-box { max-width: 300px; margin: auto; padding: 10px; border: 1px solid #eee; box-shadow: 0 0 5px rgba(0, 0, 0, 0.15); }
                 .header { text-align: center; margin-bottom: 10px; }
-                .header h2 { margin: 0; font-size: 18px; }
+                .header h2 { margin: 0; font-size: 16px; font-weight: bold; }
                 .header p { margin: 2px 0; }
                 table { width: 100%; border-collapse: collapse; }
                 th, td { border-bottom: 1px dashed #ccc; padding: 5px 0; }
@@ -343,9 +413,52 @@ async function thanhToan(onSaleCompletedCallback) {
 // --- KHỞI TẠO MODULE ---
 // =================================================================
 
+/**
+ * Tải dữ liệu các bàn ăn từ Firestore và lắng nghe thay đổi.
+ */
+async function loadTableData() {
+    const tablesCollectionRef = collection(db, 'restaurants', restaurantId, 'tables');
+    const q = query(tablesCollectionRef, orderBy('ten_ban'));
+    onSnapshot(q,
+        (snapshot) => {
+            const allTables = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // CẢI TIẾN: Thêm logic sắp xếp mạnh mẽ để đồng bộ với Dashboard
+            allTables.sort((a, b) => {
+                const numA = parseInt(a.ten_ban, 10);
+                const numB = parseInt(b.ten_ban, 10);
+                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                return a.ten_ban.localeCompare(b.ten_ban, 'vi');
+            });
+            danhSachBanData = allTables;
+            renderLuoiBanAn(); // Vẽ lại lưới bàn mỗi khi có thay đổi
+        },
+        (error) => { // CẢI TIẾN: Thêm xử lý lỗi
+            console.error("Lỗi khi tải danh sách bàn: ", error);
+            danhSachBanDiv.innerHTML = `<p class="no-tables-message error">Không thể tải danh sách bàn. Vui lòng kiểm tra kết nối và thử lại.</p>`;
+        });
+}
+
+/**
+ * Tải dữ liệu thực đơn từ Firestore và điền vào thẻ <select>
+ */
+async function loadMenuData() {
+    const menuCollectionRef = collection(db, 'restaurants', restaurantId, 'menu');
+    const q = query(menuCollectionRef, orderBy('name'));
+    const querySnapshot = await getDocs(q);
+    toanBoThucDon = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    selectMonAn.innerHTML = '<option value="">-- Chọn món --</option>';
+    toanBoThucDon.forEach(mon => {
+        const option = document.createElement('option');
+        option.value = mon.id;
+        option.textContent = `${mon.name} - ${currencyFormatter.format(mon.price)}`;
+        selectMonAn.appendChild(option);
+    });
+}
+
 export function initBanHang(onSaleCompletedCallback) {
-    // Vẽ lưới bàn ăn lần đầu tiên khi tải trang
-    renderLuoiBanAn();
+    loadTableData();
+    loadMenuData();
 
     // Lắng nghe sự thay đổi của TẤT CẢ các đơn hàng đang hoạt động
     const q = query(collection(db, "restaurants", restaurantId, "current_orders"));
@@ -370,17 +483,6 @@ export function initBanHang(onSaleCompletedCallback) {
             chonBan(soBan); 
         }
     });
-
-    // Gắn sự kiện để tự động điền giá khi chọn món
-    if (inputTenMon) {
-        inputTenMon.addEventListener('input', () => {
-            const tenMonChon = inputTenMon.value;
-            if (menuData.has(tenMonChon)) {
-                const donGia = menuData.get(tenMonChon);
-                inputDonGiaMon.value = donGia;
-            }
-        });
-    }
 
     // Gắn các sự kiện khác
     formGoiMon.addEventListener('submit', themMon);

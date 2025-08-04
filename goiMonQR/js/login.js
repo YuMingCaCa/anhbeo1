@@ -1,24 +1,19 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // --- Mật khẩu mặc định ---
-    // Chỉ còn một tài khoản duy nhất để vào trang Dashboard
-    const LOGIN_CREDENTIALS = {
-        // Ví dụ cho quán mới: 'phogia' : 'matkhau456'
-        quanly: '123456' // <-- THAY TÊN ĐĂNG NHẬP VÀ MẬT KHẨU CHO QUÁN MỚI
-    };
-    // -------------------------
+import { auth } from '../../js/firebase.js';
+import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 
+document.addEventListener('DOMContentLoaded', () => {
     const loginTriggerBtn = document.getElementById('login-trigger-btn');
     const loginModal = document.getElementById('login-modal');
     const closeLoginModalBtn = document.getElementById('close-login-modal-btn');
     const loginForm = document.getElementById('login-form');
     const errorMessage = document.getElementById('error-message');
-    const roleInputEl = document.getElementById('role');
+    const emailInputEl = document.getElementById('role'); // Giữ nguyên ID nhưng giờ đây là email
     const passwordInputEl = document.getElementById('password');
 
     // Hiển thị cửa sổ đăng nhập khi nhấn nút
     loginTriggerBtn.addEventListener('click', () => {
         loginModal.classList.remove('hidden');
-        roleInputEl.focus();
+        emailInputEl.focus();
     });
 
     // Hàm để ẩn cửa sổ đăng nhập
@@ -38,28 +33,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Xử lý logic khi gửi form đăng nhập
-    loginForm.addEventListener('submit', (e) => {
+    loginForm.addEventListener('submit', async (e) => {
         e.preventDefault(); // Ngăn form reload lại trang
-        const roleInput = roleInputEl.value.trim().toLowerCase();
+        const emailInput = emailInputEl.value.trim();
         const passwordInput = passwordInputEl.value;
 
         errorMessage.textContent = ''; // Xóa lỗi cũ
 
-        // Kiểm tra xem tên đăng nhập có tồn tại không
-        if (LOGIN_CREDENTIALS.hasOwnProperty(roleInput)) {
-            // Kiểm tra mật khẩu
-            if (passwordInput === LOGIN_CREDENTIALS[roleInput]) {
-                // Nếu đúng, chuyển hướng đến trang dashboard
-                // Lưu trạng thái đã đăng nhập vào sessionStorage
-                sessionStorage.setItem('isLoggedIn', 'true');
-                window.location.href = 'goiMonQR/dashboard/'; // Chuyển hướng đến thư mục dashboard một cách rõ ràng hơn
-            } else {
-                // Sai mật khẩu
-                errorMessage.textContent = 'Mật khẩu không chính xác.';
-            }
-        } else {
-            // Sai tên đăng nhập
-            errorMessage.textContent = 'Tên đăng nhập không chính xác.';
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, emailInput, passwordInput);
+            // Đăng nhập thành công, Firebase sẽ tự động quản lý phiên.
+            // Chỉ cần chuyển hướng.
+            console.log("Đăng nhập thành công:", userCredential.user.email);
+            window.location.href = 'goiMonQR/dashboard/';
+        } catch (error) {
+            // Xử lý lỗi
+            console.error("Lỗi đăng nhập:", error.code);
+            // Cung cấp thông báo lỗi chung để tăng bảo mật
+            errorMessage.textContent = 'Email hoặc mật khẩu không chính xác.';
         }
     });
 });

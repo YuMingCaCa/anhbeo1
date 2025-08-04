@@ -1,4 +1,9 @@
-import { db, collection, addDoc, Timestamp } from '../config/firebase.js';
+import { db } from '../../../js/firebase.js';
+import {
+  collection,
+  addDoc,
+  Timestamp
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 import { restaurantId } from '../../../js/config.js';
 
 // --- Lấy các phần tử HTML (Nhập hàng) ---

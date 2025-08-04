@@ -35,7 +35,7 @@
             <header class="text-center mb-8 relative">
                 <h1 id="dashboard-title" class="text-4xl font-bold text-gray-800">Bảng Điều Khiển</h1>
                 <p class="text-gray-600 mt-2">Quản lý tổng hợp cho chủ quán</p>
-            <a href="../generate-qr/" target="_blank" class="absolute top-0 right-0 bg-teal-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-teal-600 transition-colors flex items-center gap-2 shadow-md no-print">
+                <a href="../generate-qr/" target="_blank" class="absolute top-0 right-0 bg-teal-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-teal-600 transition-colors flex items-center gap-2 shadow-md">
                     <i class="fas fa-qrcode"></i><span>Tạo mã QR</span>
                 </a>
                 <button id="logout-btn" class="absolute top-0 left-0 bg-red-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-red-600 transition-colors flex items-center gap-2 shadow-md">
@@ -47,6 +47,7 @@
                 <nav class="flex justify-center -mb-px">
                     <button class="tab-btn active" data-tab="kitchen"><i class="fas fa-utensils mr-2"></i>Màn Hình Bếp</button>
                     <button class="tab-btn" data-tab="menu"><i class="fas fa-book-open mr-2"></i>Quản Lý Thực Đơn</button>
+                    <button class="tab-btn" data-tab="tables"><i class="fas fa-chair mr-2"></i>Quản Lý Bàn</button>
                     <button class="tab-btn" data-tab="reports"><i class="fas fa-chart-line mr-2"></i>Báo Cáo (Sắp có)</button>
                     <button class="tab-btn" data-tab="quannhau"><i class="fas fa-beer mr-2"></i>Quán Nhậu</button>
                 </nav>
@@ -116,6 +117,24 @@
                     </div>
                 </div>
 
+                <div id="tables-tab" class="tab-content">
+                    <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h2 class="text-2xl font-bold mb-4">Thêm Bàn Mới</h2>
+                            <form id="add-table-form" class="flex gap-2">
+                                <input type="text" id="new-table-name" placeholder="Nhập tên/số bàn, ví dụ: 1, 2, VIP 1..." required class="flex-grow block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                <button type="submit" class="flex-shrink-0 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"><i class="fas fa-plus"></i> Thêm</button>
+                            </form>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-lg">
+                            <h2 class="text-2xl font-bold mb-4">Danh Sách Bàn Hiện Có</h2>
+                            <div id="table-management-list" class="space-y-2 max-h-80 overflow-y-auto">
+                                <p class="text-center text-gray-500">Đang tải danh sách bàn...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="reports-tab" class="tab-content">
                     <div class="text-center p-16 bg-white rounded-lg shadow-md">
                         <i class="fas fa-chart-line text-6xl text-gray-400 mb-4"></i>
@@ -139,21 +158,27 @@
     </div>
 
     <script type="module">
-        // --- PAGE GUARD & LOGOUT ---
-        if (sessionStorage.getItem('isLoggedIn') !== 'true') {
-            alert("Vui lòng đăng nhập để truy cập trang quản lý.");
-            window.location.href = '../../';
-        }
-
-        import { db } from '../js/firebase.js';
+        import { db, auth } from '../../js/firebase.js';
+        import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
         import { voiceEngine } from '../js/voice-engine.js';
         import { restaurantId, restaurantName } from '../../js/config.js';
-        import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+        import {
+            collection,
+            addDoc,
+            onSnapshot,
+            doc,
+            updateDoc,
+            deleteDoc,
+            query,
+            where,
+            deleteField // <-- Thêm deleteField
+        } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-        // --- COLLECTION REFERENCES ---
-        const menuCollection = collection(db, `${restaurantId}-menu`);
-        const categoriesCollection = collection(db, `${restaurantId}-categories`);
-        const ordersCollection = collection(db, `${restaurantId}-orders`);
+        // --- COLLECTION REFERENCES (NEW STRUCTURE) ---
+        const menuCollection = collection(db, 'restaurants', restaurantId, 'menu');
+        const categoriesCollection = collection(db, 'restaurants', restaurantId, 'categories');
+        const tablesCollection = collection(db, 'restaurants', restaurantId, 'tables');
+        const currentOrdersCollection = collection(db, 'restaurants', restaurantId, 'current_orders');
 
         // --- DOM ELEMENTS ---
         const soundModal = document.getElementById('sound-modal');
@@ -171,6 +196,9 @@
         const productForm = document.getElementById('product-form');
         const productListDiv = document.getElementById('product-list');
         const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        const addTableForm = document.getElementById('add-table-form');
+        const tableManagementList = document.getElementById('table-management-list');
+
 
         // --- GLOBAL STATE ---
         let allProducts = [];
@@ -186,26 +214,33 @@
         };
 
         // --- KITCHEN TAB FUNCTIONS ---
-        const renderOrder = (order) => {
+        const renderOrder = (orderData, kitchenData) => {
             const orderCard = document.createElement('div');
-            orderCard.id = `order-${order.id}`;
+            orderCard.id = `order-${orderData.id}`;
             orderCard.className = 'bg-white rounded-lg shadow-lg p-4 flex flex-col order-card-new';
-            const itemsHtml = order.items.map(item => `<li class="flex justify-between"><span>${item.name}</span><span class="font-semibold">x${item.quantity}</span></li>`).join('');
-            const notesHtml = order.notes ? `<div class="mt-3 pt-3 border-t border-dashed border-gray-300"><p class="text-sm text-gray-800"><strong class="font-semibold text-red-600"><i class="fas fa-sticky-note mr-1"></i> Ghi chú:</strong></p><p class="text-sm text-gray-700 pl-2 italic">"${order.notes}"</p></div>` : '';
+            
+            // Render items from kitchenData, not the whole order
+            const itemsHtml = kitchenData.items.map(item => `<li class="flex justify-between"><span>${item.ten_mon}</span><span class="font-semibold">x${item.so_luong}</span></li>`).join('');
+            const notesHtml = kitchenData.notes ? `<div class="mt-3 pt-3 border-t border-dashed border-gray-300"><p class="text-sm text-gray-800"><strong class="font-semibold text-red-600"><i class="fas fa-sticky-note mr-1"></i> Ghi chú:</strong></p><p class="text-sm text-gray-700 pl-2 italic">"${kitchenData.notes}"</p></div>` : '';
+            
             orderCard.innerHTML = `
                 <div class="border-b pb-2 mb-2">
-                    <h3 class="text-2xl font-bold">Bàn ${order.table}</h3>
-                    <p class="text-sm text-gray-500">Lúc: ${new Date(order.createdAt.seconds * 1000).toLocaleTimeString('vi-VN')}</p>
+                    <h3 class="text-2xl font-bold">Bàn ${orderData.ten_ban}</h3>
+                    <p class="text-sm text-gray-500">Lúc: ${new Date(kitchenData.timestamp.seconds * 1000).toLocaleTimeString('vi-VN')}</p>
                 </div>
                 <div class="flex-grow mb-4">
                     <ul class="space-y-1">${itemsHtml}</ul>
                     ${notesHtml}
                 </div>
                 <div class="border-t pt-2 mt-auto">
-                     <p class="text-lg font-bold text-right">Tổng: ${formatCurrency(order.total)}</p>
-                    <button data-id="${order.id}" class="complete-btn mt-4 w-full bg-green-500 text-white py-2 rounded-lg font-bold hover:bg-green-600 transition-colors">Hoàn Thành</button>
+                    <button data-id="${orderData.id}" class="complete-btn mt-4 w-full bg-green-500 text-white py-2 rounded-lg font-bold hover:bg-green-600 transition-colors">Đã Xong</button>
                 </div>
             `;
+
+            // Remove old card if it exists before prepending new one
+            const existingCard = document.getElementById(`order-${orderData.id}`);
+            if (existingCard) existingCard.remove();
+
             ordersGrid.prepend(orderCard);
         };
 
@@ -215,8 +250,33 @@
             const id = target.dataset.id;
             target.disabled = true;
             target.textContent = 'Đang xử lý...';
-            await updateDoc(doc(db, `${restaurantId}-orders`, id), { status: "completed" });
+            // NEW LOGIC: Instead of deleting, we remove the 'new_items_for_kitchen' field.
+            const orderDocRef = doc(db, 'restaurants', restaurantId, 'current_orders', id);
+            await updateDoc(orderDocRef, {
+                new_items_for_kitchen: deleteField()
+            });
         });
+
+        // --- TABLE MANAGEMENT TAB FUNCTIONS ---
+        const renderTables = (tables) => {
+            tableManagementList.innerHTML = '';
+            if (tables.length === 0) {
+                tableManagementList.innerHTML = '<p class="text-center text-gray-500">Chưa có bàn nào.</p>';
+            } else {
+                // Sắp xếp bàn theo thứ tự số trước, chữ sau
+                tables.sort((a, b) => {
+                    const numA = parseInt(a.ten_ban, 10);
+                    const numB = parseInt(b.ten_ban, 10);
+                    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                    return a.ten_ban.localeCompare(b.ten_ban, 'vi');
+                }).forEach(table => {
+                    const tableEl = document.createElement('div');
+                    tableEl.className = 'flex justify-between items-center bg-gray-100 p-2 rounded-md';
+                    tableEl.innerHTML = `<span>${table.ten_ban}</span><button data-id="${table.id}" data-name="${table.ten_ban}" class="delete-table-btn text-red-500 hover:text-red-700 w-8 h-8 rounded-full hover:bg-red-50 flex items-center justify-center transition-colors"><i class="fas fa-trash"></i></button>`;
+                    tableManagementList.appendChild(tableEl);
+                });
+            }
+        };
 
         // --- MENU MANAGEMENT TAB FUNCTIONS ---
         const renderCategories = (categories) => {
@@ -316,7 +376,7 @@
                 return;
             }
             if (confirm(`Bạn có chắc muốn xóa phân loại "${categoryName}"?`)) {
-                await deleteDoc(doc(db, `${restaurantId}-categories`, categoryId));
+                await deleteDoc(doc(db, 'restaurants', restaurantId, 'categories', categoryId));
             }
         });
 
@@ -335,7 +395,7 @@
                 return;
             }
             if (id) {
-                await updateDoc(doc(db, `${restaurantId}-menu`, id), productData);
+                await updateDoc(doc(db, 'restaurants', restaurantId, 'menu', id), productData);
             } else {
                 await addDoc(menuCollection, productData);
             }
@@ -348,7 +408,7 @@
             const id = target.dataset.id;
             if (target.classList.contains('delete-btn')) {
                 if (confirm('Bạn có chắc muốn xóa món ăn này?')) {
-                    await deleteDoc(doc(db, `${restaurantId}-menu`, id));
+                    await deleteDoc(doc(db, 'restaurants', restaurantId, 'menu', id));
                 }
             } else if (target.classList.contains('edit-btn')) {
                 const product = allProducts.find(p => p.id === id);
@@ -369,35 +429,65 @@
         });
         cancelEditBtn.addEventListener('click', resetProductForm);
 
+        addTableForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newTableNameInput = document.getElementById('new-table-name');
+            const tableName = newTableNameInput.value.trim();
+            if (!tableName) {
+                alert('Vui lòng nhập tên bàn!');
+                return;
+            }
+            // Thêm logic kiểm tra trùng lặp nếu cần
+            await addDoc(tablesCollection, { ten_ban: tableName });
+            addTableForm.reset();
+        });
+
+        tableManagementList.addEventListener('click', async (e) => {
+            const target = e.target.closest('.delete-table-btn');
+            if (!target) return;
+            const tableId = target.dataset.id;
+            const tableName = target.dataset.name;
+            if (confirm(`Bạn có chắc muốn xóa bàn "${tableName}"?`)) {
+                await deleteDoc(doc(db, 'restaurants', restaurantId, 'tables', tableId));
+            }
+        });
+
         // --- INITIALIZATION & MAIN APP LOGIC ---
         const startDataListeners = () => {
-            onSnapshot(query(ordersCollection, where("status", "==", "new")), (snapshot) => {
+            // NEW QUERY: Listen to current_orders where 'new_items_for_kitchen' exists
+            const q = query(currentOrdersCollection, where("new_items_for_kitchen", "!=", null));
+
+            onSnapshot(q, (snapshot) => {
                 loadingMessage.style.display = snapshot.empty && ordersGrid.childElementCount === 1 ? 'block' : 'none';
                 snapshot.docChanges().forEach((change) => {
-                    if (change.type === "added") {
-                        const newOrder = { id: change.doc.id, ...change.doc.data() };
-                        renderOrder(newOrder);
+                    const orderData = { id: change.doc.id, ...change.doc.data() };
+                    const kitchenData = orderData.new_items_for_kitchen;
+
+                    if ((change.type === "added" || change.type === "modified") && kitchenData) {
+                        renderOrder(orderData, kitchenData);
                         notificationSound.play().catch(e => console.log("Lỗi phát âm thanh:", e));
+                        
                         let announcementText = '';
-                        const hasItems = newOrder.items && newOrder.items.length > 0;
-                        const hasNotes = newOrder.notes && newOrder.notes.trim() !== '';
+                        const hasItems = kitchenData.items && kitchenData.items.length > 0;
+                        const hasNotes = kitchenData.notes && kitchenData.notes.trim() !== '';
+
                         if (hasItems) {
-                            const itemsText = newOrder.items.map(item => `${item.quantity} ${item.name}`).join(', ');
-                            announcementText = `Có đơn mới từ Bàn ${newOrder.table}. Gồm có: ${itemsText}`;
+                            const itemsText = kitchenData.items.map(item => `${item.so_luong} ${item.ten_mon}`).join(', ');
+                            announcementText = `Có đơn mới từ Bàn ${orderData.ten_ban}. Gồm có: ${itemsText}`;
                             if (hasNotes) {
-                                announcementText += `. Có ghi chú thêm: ${newOrder.notes}`;
+                                announcementText += `. Có ghi chú thêm: ${kitchenData.notes}`;
                             }
-                        } else if (hasNotes) {
-                            announcementText = `Bàn ${newOrder.table} có yêu cầu mới. Ghi chú: ${newOrder.notes}`;
                         }
                         voiceEngine.speak(announcementText);
-                        showToast(`Có đơn hàng mới từ Bàn ${newOrder.table}!`);
+                        showToast(`Có đơn hàng mới từ Bàn ${orderData.ten_ban}!`);
                     }
+
                     if (change.type === "removed") {
+                        // This now triggers when 'new_items_for_kitchen' is deleted (i.e., completed)
                         const cardToRemove = document.getElementById(`order-${change.doc.id}`);
                         if (cardToRemove) {
                             cardToRemove.classList.add('order-card-removing');
-                            setTimeout(() => cardToRemove.remove(), 500);
+                            setTimeout(() => cardToRemove.remove(), 400);
                         }
                     }
                 });
@@ -411,6 +501,11 @@
             onSnapshot(query(menuCollection), (snapshot) => {
                 allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderProducts(allProducts);
+            });
+
+            onSnapshot(query(tablesCollection), (snapshot) => {
+                const allTables = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderTables(allTables);
             });
         };
 
@@ -429,12 +524,6 @@
         // --- EVENT LISTENERS ---
         enableSoundBtn.addEventListener('click', startApp);
 
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            sessionStorage.removeItem('isLoggedIn');
-            alert("Bạn đã đăng xuất.");
-            window.location.href = '../../';
-        });
-
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 tabs.forEach(t => t.classList.remove('active'));
@@ -445,6 +534,27 @@
             });
         });
 
+        // --- AUTH GUARD & LOGOUT ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in, allow access to the dashboard.
+                console.log("User is logged in:", user.email);
+                // The sound modal logic will handle showing the main content.
+            } else {
+                // User is not signed in, redirect to the login page.
+                console.log("User not logged in. Redirecting...");
+                window.location.href = '../../'; // Redirect to the root/login page
+            }
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            signOut(auth).then(() => {
+                // Sign-out successful. The onAuthStateChanged listener will automatically redirect.
+                console.log("User signed out.");
+            }).catch((error) => {
+                console.error("Sign out error", error);
+            });
+        });
     </script>
     <footer class="mt-8 text-center text-sm text-gray-500">
         <div class="max-w-7xl mx-auto py-4 border-t border-gray-200">
