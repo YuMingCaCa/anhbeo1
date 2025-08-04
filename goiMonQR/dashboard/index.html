@@ -218,19 +218,47 @@
             const orderCard = document.createElement('div');
             orderCard.id = `order-${orderData.id}`;
             orderCard.className = 'bg-white rounded-lg shadow-lg p-4 flex flex-col order-card-new';
-            
-            // Render items from kitchenData, not the whole order
-            const itemsHtml = kitchenData.items.map(item => `<li class="flex justify-between"><span>${item.ten_mon}</span><span class="font-semibold">x${item.so_luong}</span></li>`).join('');
-            const notesHtml = kitchenData.notes ? `<div class="mt-3 pt-3 border-t border-dashed border-gray-300"><p class="text-sm text-gray-800"><strong class="font-semibold text-red-600"><i class="fas fa-sticky-note mr-1"></i> Ghi chú:</strong></p><p class="text-sm text-gray-700 pl-2 italic">"${kitchenData.notes}"</p></div>` : '';
-            
+
+            const hasItems = kitchenData.items && kitchenData.items.length > 0;
+            const hasNotes = kitchenData.notes && kitchenData.notes.trim() !== '';
+
+            let contentHtml = '';
+
+            if (hasItems) {
+                // Trường hợp có gọi món (có thể có hoặc không có ghi chú)
+                const itemsHtml = kitchenData.items.map(item => 
+                    `<li class="flex justify-between"><span>${item.ten_mon}</span><span class="font-semibold">x${item.so_luong}</span></li>`
+                ).join('');
+                
+                const notesHtml = hasNotes 
+                    ? `<div class="mt-3 pt-3 border-t border-dashed border-gray-300">
+                           <p class="text-sm text-gray-800">
+                               <strong class="font-semibold text-red-600"><i class="fas fa-sticky-note mr-1"></i> Ghi chú:</strong>
+                           </p>
+                           <p class="text-sm text-gray-700 pl-2 italic">"${kitchenData.notes}"</p>
+                       </div>` 
+                    : '';
+
+                contentHtml = `<ul class="space-y-1">${itemsHtml}</ul>${notesHtml}`;
+            } else if (hasNotes) {
+                // Trường hợp CHỈ có ghi chú, không gọi món
+                contentHtml = `
+                    <div class="text-center flex-grow flex flex-col justify-center items-center">
+                        <p class="text-sm text-gray-500 mb-2">(Yêu cầu không có món ăn)</p>
+                        <p class="text-lg font-bold text-red-600 p-3 bg-red-50 rounded-lg">
+                            <i class="fas fa-comment-dots mr-2"></i>${kitchenData.notes}
+                        </p>
+                    </div>
+                `;
+            }
+
             orderCard.innerHTML = `
                 <div class="border-b pb-2 mb-2">
                     <h3 class="text-2xl font-bold">Bàn ${orderData.ten_ban}</h3>
                     <p class="text-sm text-gray-500">Lúc: ${new Date(kitchenData.timestamp.seconds * 1000).toLocaleTimeString('vi-VN')}</p>
                 </div>
-                <div class="flex-grow mb-4">
-                    <ul class="space-y-1">${itemsHtml}</ul>
-                    ${notesHtml}
+                <div class="flex-grow mb-4 flex flex-col">
+                    ${contentHtml}
                 </div>
                 <div class="border-t pt-2 mt-auto">
                     <button data-id="${orderData.id}" class="complete-btn mt-4 w-full bg-green-500 text-white py-2 rounded-lg font-bold hover:bg-green-600 transition-colors">Đã Xong</button>
@@ -464,22 +492,31 @@
                     const kitchenData = orderData.new_items_for_kitchen;
 
                     if ((change.type === "added" || change.type === "modified") && kitchenData) {
+
                         renderOrder(orderData, kitchenData);
                         notificationSound.play().catch(e => console.log("Lỗi phát âm thanh:", e));
-                        
-                        let announcementText = '';
+
                         const hasItems = kitchenData.items && kitchenData.items.length > 0;
                         const hasNotes = kitchenData.notes && kitchenData.notes.trim() !== '';
+                        let announcementText = '';
 
+                        // CẢI TIẾN: Tách riêng logic thông báo để đảm bảo đọc được ghi chú
                         if (hasItems) {
                             const itemsText = kitchenData.items.map(item => `${item.so_luong} ${item.ten_mon}`).join(', ');
-                            announcementText = `Có đơn mới từ Bàn ${orderData.ten_ban}. Gồm có: ${itemsText}`;
-                            if (hasNotes) {
-                                announcementText += `. Có ghi chú thêm: ${kitchenData.notes}`;
+                            announcementText = `Bàn ${orderData.ten_ban} có đơn mới, gồm có: ${itemsText}. `;
+                            if (hasNotes) { // Nếu có món và có cả ghi chú
+                                announcementText += `Có ghi chú thêm: ${kitchenData.notes}`;
                             }
+                        } else if (hasNotes) {
+                            // Trường hợp chỉ có ghi chú, không có món
+                            announcementText = `Bàn ${orderData.ten_ban} có yêu cầu. Ghi chú: ${kitchenData.notes}`;
                         }
-                        voiceEngine.speak(announcementText);
-                        showToast(`Có đơn hàng mới từ Bàn ${orderData.ten_ban}!`);
+
+                        // Chỉ đọc và hiển thị thông báo nếu có nội dung
+                        if (announcementText) {
+                            voiceEngine.speak(announcementText);
+                            showToast(`Có yêu cầu mới từ Bàn ${orderData.ten_ban}!`);
+                        }
                     }
 
                     if (change.type === "removed") {

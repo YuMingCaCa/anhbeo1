@@ -25,23 +25,28 @@
         </main>
     </div>
 
-    <div id="cart-section" class="hidden fixed bottom-0 left-0 w-full bg-white border-t-2 border-gray-200 shadow-lg z-10">
+    <!-- CẢI TIẾN: Thanh công cụ luôn hiển thị, chỉ ẩn/hiện phần giỏ hàng -->
+    <div id="cart-section" class="fixed bottom-0 left-0 w-full bg-white border-t-2 border-gray-200 shadow-lg z-10">
         <div class="container mx-auto max-w-3xl p-4">
-            <h2 class="text-xl font-bold mb-2">Giỏ Hàng Của Bạn</h2>
-            <div id="cart-items" class="max-h-48 overflow-y-auto mb-4 pr-2">
+            <!-- Phần giỏ hàng, chỉ hiện khi có món -->
+            <div id="cart-content" class="hidden">
+                <h2 class="text-xl font-bold mb-2">Giỏ Hàng Của Bạn</h2>
+                <div id="cart-items" class="max-h-48 overflow-y-auto mb-4 pr-2">
+                </div>
             </div>
+            <!-- Phần ghi chú, luôn hiển thị -->
             <div class="mb-3">
                 <label for="order-notes" class="block text-sm font-medium text-gray-700">Ghi chú cho nhà bếp</label>
                 <textarea id="order-notes" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ví dụ: không cay, thêm ít đá..."></textarea>
             </div>
             <div class="flex justify-between items-center">
-                <div>
+                <div id="cart-total-container" class="hidden">
                     <span class="text-gray-600">Tổng cộng:</span>
                     <p id="cart-total" class="text-2xl font-bold text-blue-600">0đ</p>
                 </div>
-                <button id="send-order-btn" class="bg-green-500 text-white px-8 py-3 rounded-lg font-bold text-lg hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2">
+                <button id="send-order-btn" class="ml-auto bg-green-500 text-white px-8 py-3 rounded-lg font-bold text-lg hover:bg-green-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2">
                     <i class="fas fa-paper-plane"></i>
-                    <span>Gửi Đơn Hàng</span>
+                    <span>Gửi Yêu Cầu</span>
                 </button>
             </div>
         </div>

@@ -12,18 +12,19 @@ import {
     runTransaction,
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const menuContainer = document.getElementById('menu-container');
+    // CẢI TIẾN: Lấy các phần tử mới để điều khiển hiển thị linh hoạt hơn
     const cartItemsContainer = document.getElementById('cart-items');
+    const cartContent = document.getElementById('cart-content'); // Div chứa tiêu đề và danh sách món
+    const cartTotalContainer = document.getElementById('cart-total-container'); // Div chứa tổng tiền
     const cartTotalSpan = document.getElementById('cart-total');
     const sendOrderBtn = document.getElementById('send-order-btn');
     const orderNotesInput = document.getElementById('order-notes');
     const tableNumberSpan = document.getElementById('table-number');
     const restaurantNameSpan = document.getElementById('restaurant-name');
     const loadingMenuMessage = document.getElementById('loading-menu');
-    const cartSection = document.getElementById('cart-section');
 
     // --- State ---
     let menu = [];
@@ -196,11 +197,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateCartView() {
         cartItemsContainer.innerHTML = '';
         let total = 0;
+        // CẢI TIẾN: Chỉ ẩn/hiện các thành phần liên quan đến giỏ hàng, không ẩn toàn bộ thanh công cụ
         if (Object.keys(cart).length === 0) {
-            cartItemsContainer.innerHTML = '<p class="text-gray-500">Giỏ hàng của bạn đang trống.</p>';
-            cartSection.classList.add('hidden'); // Hide cart if empty
+            cartContent.classList.add('hidden');
+            cartTotalContainer.classList.add('hidden');
         } else {
-            cartSection.classList.remove('hidden'); // Show cart if not empty
+            cartContent.classList.remove('hidden');
+            cartTotalContainer.classList.remove('hidden');
             for (const id in cart) {
                 const item = cart[id];
                 total += item.price * item.quantity;
@@ -251,7 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         sendOrderBtn.disabled = true;
-        sendOrderBtn.textContent = 'Đang gửi...';
+        // CẢI TIẾN: Chỉ thay đổi text trong span, giữ lại icon
+        sendOrderBtn.querySelector('span').textContent = 'Đang gửi...';
 
         // Prepare the items to be added
         const newItemsForOrder = Object.values(cart).map(item => ({
@@ -325,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             // Luôn kích hoạt lại nút bấm dù thành công hay thất bại
             sendOrderBtn.disabled = false;
-            sendOrderBtn.textContent = 'Gửi Đơn Hàng';
+            sendOrderBtn.querySelector('span').textContent = 'Gửi Yêu Cầu';
         }
     }
 
