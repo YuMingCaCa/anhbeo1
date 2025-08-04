@@ -33,6 +33,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Helper Functions ---
     const formatCurrency = (amount) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 
+    // CẢI TIẾN: Thêm hàm hiển thị thông báo và reset
+    const showSuccessAndReset = () => {
+        // Hiển thị thông báo thành công
+        const successModal = document.createElement('div');
+        successModal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4';
+        successModal.innerHTML = `
+            <div class="text-center p-8 bg-green-100 text-green-800 rounded-lg shadow-xl max-w-sm mx-auto">
+                <div class="text-5xl mb-4">✅</div>
+                <h1 class="text-2xl font-bold">Gửi yêu cầu thành công!</h1>
+                <p class="mt-2">Nhà bếp đã nhận được yêu cầu của bạn. Vui lòng chờ trong giây lát.</p>
+                <button id="close-success-modal" class="mt-6 bg-green-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-green-700">Tiếp tục gọi món</button>
+            </div>
+        `;
+        document.body.appendChild(successModal);
+
+        // Reset trạng thái
+        cart = {};
+        orderNotesInput.value = '';
+        updateCartView();
+
+        // Gắn sự kiện để đóng modal
+        document.getElementById('close-success-modal').addEventListener('click', () => successModal.remove());
+    };
+
     /**
      * Extracts table number from URL query parameter.
      * CẢI TIẾN: Thêm bước xác thực bàn với cơ sở dữ liệu.
@@ -215,8 +239,10 @@ document.addEventListener('DOMContentLoaded', () => {
      * THE CORE LOGIC: Sends the order to Firestore using a transaction.
      */
     async function sendOrder() {
-        if (Object.keys(cart).length === 0) {
-            alert("Giỏ hàng trống, vui lòng chọn món!");
+        const orderNotes = orderNotesInput.value.trim();
+        // CẢI TIẾN: Cho phép gửi ghi chú ngay cả khi giỏ hàng trống
+        if (Object.keys(cart).length === 0 && !orderNotes) {
+            alert("Vui lòng chọn món hoặc nhập ghi chú để gửi đến nhà bếp!");
             return;
         }
         if (!tableNumber) {
@@ -236,7 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
 
         const totalForNewItems = newItemsForOrder.reduce((sum, item) => sum + item.thanh_tien, 0);
-        const orderNotes = orderNotesInput.value.trim();
 
         // The document reference for the current table's order
         const orderDocRef = doc(db, "restaurants", restaurantId, "current_orders", `ban_${tableNumber}`);
@@ -292,16 +317,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Success
-            document.body.innerHTML = `<div class="text-center p-8 bg-green-100 text-green-800">
-                <h1 class="text-2xl font-bold">Gửi đơn hàng thành công!</h1>
-                <p>Nhà bếp đã nhận được yêu cầu của bạn. Vui lòng chờ trong giây lát.</p>
-                <p class="mt-4">Bạn có thể tiếp tục gọi thêm món nếu muốn bằng cách tải lại trang này.</p>
-            </div>`;
-
+            // CẢI TIẾN: Hiển thị thông báo và reset thay vì thay thế toàn bộ trang
+            showSuccessAndReset();
         } catch (e) {
             console.error("Transaction failed: ", e);
             alert("Gửi đơn hàng thất bại. Vui lòng thử lại hoặc báo cho nhân viên.");
+        } finally {
+            // Luôn kích hoạt lại nút bấm dù thành công hay thất bại
             sendOrderBtn.disabled = false;
             sendOrderBtn.textContent = 'Gửi Đơn Hàng';
         }
