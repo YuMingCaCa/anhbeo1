@@ -50,7 +50,8 @@
             <div class="grid md:grid-cols-3 gap-4">
                 <div>
                     <label for="base-url" class="block text-sm font-medium text-gray-700">Đường dẫn trang gọi món (URL)</label>
-                    <input type="text" id="base-url" value="https://yumingcaca.github.io/anhbeo/" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    <!-- Thay đổi giá trị mặc định theo yêu cầu của bạn -->
+                    <input type="text" id="base-url" value="https://anhbeo1.vercel.app/goiMonQR/" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
                 <div>
                     <label for="table-count" class="block text-sm font-medium text-gray-700">Tổng số bàn cần tạo</label>
@@ -92,7 +93,7 @@
 
         generateBtn.addEventListener('click', () => {
             qrCodeContainer.innerHTML = ''; // Xóa các mã cũ
-            const baseUrl = baseUrlInput.value;
+            let baseUrl = baseUrlInput.value;
             const tableCount = parseInt(tableCountInput.value, 10);
             const qrsPerPage = qrsPerPageSelect.value;
 
@@ -101,12 +102,19 @@
                 return;
             }
 
+            // Đảm bảo đường dẫn luôn kết thúc bằng dấu gạch chéo '/'
+            if (!baseUrl.endsWith('/')) {
+                baseUrl += '/';
+            }
+
             // Gán class cho việc in ấn
             qrCodeContainer.className = qrCodeContainer.className.replace(/print-cols-\d+/g, ''); // Xóa class cũ
             qrCodeContainer.classList.add(`print-cols-${qrsPerPage}`);
 
             for (let i = 1; i <= tableCount; i++) {
-                const fullUrl = `${baseUrl}?table=${i}`;
+                // *** THAY ĐỔI LOGIC TẠO URL Ở ĐÂY ***
+                // Tạo URL với định dạng: [baseUrl]index.html?table=[số bàn]
+                const fullUrl = `${baseUrl}index.html?table=${i}`;
                 
                 const qrItem = document.createElement('div');
                 qrItem.className = 'qr-item bg-white p-4 rounded-lg shadow-md flex flex-col items-center text-center';
